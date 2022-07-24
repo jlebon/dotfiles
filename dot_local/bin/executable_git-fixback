@@ -1,0 +1,82 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+# This is like git fix, but targets any previous commit instead of just HEAD.
+# Calling `git fixback $rev` is equivalent to:
+#  - git commit -am 'foobar'
+#  - git rebase -i $rev^
+#  - move 'foobar' commit as a fix right after $rev
+
+# There is a `git commitback` variant which does `git commit` instead of `git
+# commit -am` and preserves unstaged changes.
+
+###
+
+# we reuse the rebase machinery so that users are familiar with the semantics
+# and how to --abort the operation if something goes wrong
+
+if [ $# -eq 1 ]; then
+    in_rebase=0
+elif [ $# -eq 4 ] && [ $1 == _rebase_ ]; then
+    in_rebase=1
+else
+    echo "Usage: $0 <REVISION>"
+    exit 0
+fi
+
+# check what we were launched as
+prog=$(basename $0)
+
+only_staged=0
+if [ "$prog" == "git-commitback" ]; then
+    only_staged=1
+fi
+
+if [ $in_rebase == 0 ]; then
+
+    # do this at the user-facing level
+
+    rev_target=$1
+    rev_target=$(git rev-parse $rev_target)
+
+    all=
+    if [[ $only_staged == 0 ]]; then
+        all=-a
+    fi
+
+    # make just like git fix, but in a new commit
+    git commit --no-edit $all --fixup $rev_target
+    rev_fix=$(git rev-parse HEAD)
+
+    # stash any changes not staged
+    stashed=0
+    if [[ $only_staged == 1 ]] && ! git diff --exit-code --quiet; then
+        git stash save --quiet "git-commitback stashed changes"
+        stashed=1
+    fi
+
+    git reset -q --hard HEAD^
+
+    editor="$0 _rebase_ $rev_target $rev_fix"
+
+    # corner-case; handle fixing up against the first commit
+    if [ $(git rev-list --count $rev_target) == 1 ]; then
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        git -c core.editor="$editor" rebase -q -i --root $branch
+    else
+        git -c core.editor="$editor" rebase -q -i $rev_target^
+    fi
+
+    if [[ $stashed == 1 ]]; then
+        git stash pop --quiet
+    fi
+else
+
+    # do this in the rebase
+
+    rev_target=$2
+    rev_fix=$3
+    rebase_file=$4
+
+    sed -i "/^pick ${rev_target::7}/ a fixup $rev_fix" $rebase_file
+fi

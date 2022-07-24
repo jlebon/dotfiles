@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+srpm=$1; shift
+
+target_dir=$HOME/Code/src.fedoraproject.org/rpms/$srpm
+if [ ! -d "$HOME/Code/src.fedoraproject.org/rpms/$srpm" ]; then
+    fedpkg clone "$srpm" "$target_dir"
+fi
+
+echo "$target_dir"

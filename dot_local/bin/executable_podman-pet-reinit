@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "Resetting podman storage"
+podman system reset -f
+
+echo "Pulling latest pet image"
+podman pull quay.io/jlebon/pet
+
+echo "Creating pet container"
+toolbox create --image quay.io/jlebon/pet
+toolbox run -c pet true

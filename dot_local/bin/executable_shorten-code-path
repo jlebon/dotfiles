@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+
+'''
+    This script is used by my bashrc so that new panes created from tmux panes
+    within a git repo will be in the same git repo's short path.  Otherwise,
+    the default #{pane_current_path} value is the resolved path.
+'''
+
+import os
+import sys
+import os.path
+from pathlib import Path
+
+orig_path = sys.argv[1]
+
+if orig_path.startswith('/home/jlebon/Code'):
+    startidx = 4
+elif orig_path.startswith('/var/home/jlebon/Code'):
+    startidx = 5
+else:
+    print(orig_path)
+    sys.exit(0)
+
+path = Path(orig_path)
+
+if os.path.exists('/code'):
+    newpath = Path('/code')
+else:
+    newpath = Path('/home/jlebon/Code')
+
+
+def find_shortest_component(dirpath, component):
+    best = component
+    joined = dirpath.joinpath(component)
+    for path in dirpath.iterdir():
+        if (path.is_symlink() and
+                path.samefile(joined) and
+                len(path.name) < len(best)):
+            best = path.name
+    return best
+
+
+for component in path.parts[startidx:]:
+    appended = newpath.joinpath(component)
+    if not appended.is_dir():
+        newpath = appended
+        break
+    newpath = newpath.joinpath(find_shortest_component(newpath, component))
+
+print(newpath)

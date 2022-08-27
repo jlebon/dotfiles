@@ -1,0 +1,57 @@
+#!/bin/bash
+set -euo pipefail
+
+# seconds to wait between checks
+POLLING_INTERVAL_SECS=10
+
+main() {
+    local ref=${1:-}
+    local remote url
+    remote=$(get_upstream_remote)
+    url=$(git ls-remote --get-url "${remote}")
+
+    if [ -z "${ref}" ]; then
+        ref=$(get_default_branch "${remote}")
+    fi
+
+    local sha new_sha
+    sha=$(resolve_remote_ref "${remote}" "${ref}")
+    echo "Watching ref ${ref} at ${url} for changes..."
+    echo "${ref}: ${sha}"
+    while sleep "${POLLING_INTERVAL_SECS}"; do
+        new_sha=$(resolve_remote_ref "${remote}" "${ref}")
+        if [ "$sha" != "$new_sha" ]; then
+            echo "${ref}: ${new_sha}"
+            exit 0
+        fi
+    done
+}
+
+get_upstream_remote() {
+    # prefer 'upstream' over 'origin'
+    remotes=$(git remote)
+    for remote in upstream origin; do
+        if grep -q $remote <<< "$remotes"; then
+            echo $remote
+            return
+        fi
+    done
+    return 1
+}
+
+get_default_branch() {
+    local remote=$1; shift
+    local ref
+    ref=$(git symbolic-ref "refs/remotes/$remote/HEAD")
+    echo "${ref#refs/remotes/upstream/}"
+}
+
+resolve_remote_ref() {
+    local remote=$1; shift
+    local ref=$1; shift
+    local sha
+    sha=$(git ls-remote "${remote}" "${ref}")
+    echo "${sha%	*}"
+}
+
+main "$@"

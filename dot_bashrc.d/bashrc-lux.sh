@@ -248,6 +248,24 @@ if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
 	fi
 fi
 
+# modified from https://unix.stackexchange.com/a/27014
+function milliseconds_to_human_short {
+    local T=$1
+    local D=$((T/1000/60/60/24))
+    local H=$((T/1000/60/60%24))
+    local M=$((T/1000/60%60))
+    local S=$((T/1000%60))
+    local MIL=$((T%1000))
+    (( D == 0 )) || printf '%dd' $D
+    (( H == 0 )) || printf '%dh' $H
+    (( M == 0 )) || printf '%dm' $M
+    if (( S != 0 )) || (( MIL != 0 )); then
+        printf '%02d' $S
+        (( MIL == 0 )) || printf '.%03d' $MIL
+        printf 's'
+    fi
+}
+
 function stdprompt() {
 
 	local rc=$?
@@ -265,9 +283,13 @@ function stdprompt() {
 	#echo -n " "
 
 	if [ -n "$__last_cmd_start_time" ]; then
-		local duration=$(($(date +%s) - $__last_cmd_start_time))
-		if [ $duration -gt 0 ]; then
-			echo -n "${duration}s "
+		local now=$(sed 's/\.\([0-9]\{3\}\).*/\1/' <<< "$EPOCHREALTIME")
+		local duration=$((now - __last_cmd_start_time))
+		if [[ $duration -ge 1000 ]]; then
+			if [[ $duration -ge 60000 ]]; then
+				duration=$((duration - duration%1000))
+			fi
+			echo -n "$(milliseconds_to_human_short $duration) "
 		fi
 	fi
 
@@ -338,15 +360,18 @@ function mark_prompt {
 	PS1_MARKER="$1"
 }
 
-# https://github.com/rcaloras/bash-preexec
-[[ -f ~/.bash-preexec.sh ]] && source ~/.bash-preexec.sh
-
 # this is used by stdprompt
 __last_cmd_start_time=
 function register_cmd_start_time() {
-    __last_cmd_start_time=$(date +%s)
+    # could use bc here, but don't want to take a dep on that
+    __last_cmd_start_time=$(sed 's/\.\([0-9]\{3\}\).*/\1/' <<< "$EPOCHREALTIME")
 }
-preexec_functions+=(register_cmd_start_time)
+
+# https://github.com/rcaloras/bash-preexec
+if [[ -f ~/.bash-preexec.sh ]]; then
+    source ~/.bash-preexec.sh
+    preexec_functions+=(register_cmd_start_time)
+fi
 
 # Same thing as prompt_callback, but print the root only.
 # This is better than git rev-parse --show-toplevel because
@@ -468,18 +493,11 @@ mkgit() {
     git commit -m 'initial commit'
 }
 
-# source user-defined completions
-# XXX: could switch to $HOME/.config/bash_completion, which is natively
-# supported
-if [ -f ~/.bash_completion ]; then
-    source ~/.bash_completion
-fi
-
 # source any local mods
 if [ -f ~/.bashrc.local ]; then
 	source ~/.bashrc.local
 fi
 
 if [ -n "${TMUX:-}" ] && command -v shorten-code-path > /dev/null; then
-    cd $(shorten-code-path $PWD)
+    cd "$(shorten-code-path "$PWD")"
 fi

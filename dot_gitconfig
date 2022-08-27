@@ -98,12 +98,12 @@
 	path = .gitconfig.local
 [commit]
 	verbose = true
-[interactive]
-	diffFilter = diff-highlight
+#[interactive]
+#	diffFilter = diff-highlight
 [pager]
-	log  = delta --file-style box --syntax-theme GitHub
-	show = delta --file-style box --syntax-theme GitHub
-	diff = delta --file-style box --syntax-theme GitHub
+	#log  = delta --file-style box --syntax-theme GitHub
+	#show = delta --file-style box --syntax-theme GitHub
+	#diff = delta --file-style box --syntax-theme GitHub
 	#log  = diff-highlight | less
 	#show = diff-highlight | less
 	#diff = diff-highlight | less

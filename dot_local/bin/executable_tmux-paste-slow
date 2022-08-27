@@ -1,0 +1,8 @@
+#!/bin/bash
+set -euo pipefail
+
+clipboard=$(xsel -bo)
+for (( i=0; i<${#clipboard}; i++ )); do
+  tmux send-keys "${clipboard:$i:1}"
+  sleep 0.05
+done

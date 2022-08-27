@@ -18,6 +18,9 @@ syntax on
 " Go into paste mode to avoid e.g. autoindent
 nnoremap <F3> :set paste!<CR>:set paste?<CR>
 
+" Spellcheck (from https://major.io/2022/08/11/migrating-from-vscode-to-vim/)
+noremap <silent><leader>S :set spell!<CR>
+
 " Automatically indent new lines
 set autoindent
 
@@ -169,6 +172,8 @@ autocmd BufNewFile,BufRead *.ign setf json
 " It defaults to ELF otherwise (wtf??)
 autocmd BufNewFile,BufRead *.am setf automake
 
+autocmd BufNewFile,BufRead *.Jenkinsfile,*.jenkinsfile setf groovy
+
 " File types that don't necessarily have an extension
 autocmd FileType bash,sh set textwidth=80
 autocmd FileType python set textwidth=79
@@ -289,8 +294,11 @@ nnoremap <silent> <F10> :%s/\s\+$//e<CR>
 " anyway.
 set completeopt=menu
 
-" FZF
-set rtp+=~/Code/github.com/junegunn/fzf
+" Automatically re-read modified files from disk instead of asking.
+set autoread
+
+" XXX: make conditional on FZF existing
+"set rtp+=~/Code/github.com/junegunn/fzf
 nnoremap <C-T> :FZF<CR>
 
 function! SetGrepPrg()
@@ -335,17 +343,6 @@ if filereadable(expand("~/.vim/autoload/pathogen.vim"))
         " Disable YAML because it doesn't highlight e.g. XXX, TODO
         " https://github.com/sheerun/vim-polyglot/issues/157
         let g:polyglot_disabled = ['yaml']
-
-    endif
-
-    " EXTENSION: https://github.com/vimwiki/vimwiki
-    if isdirectory(expand("~/.vim/bundle/vimwiki"))
-
-        let g:vimwiki_folding = 'expr'
-
-        " disable url shortening
-        let g:vimwiki_url_maxsave=0
-        let g:vimwiki_list = [{'path': '~/.vimwiki/', 'syntax': 'markdown', 'ext': '.md'}]
 
     endif
 
@@ -413,38 +410,10 @@ if filereadable(expand("~/.vim/autoload/pathogen.vim"))
     if isdirectory(expand("~/.vim/bundle/vim-gitgutter"))
 
         " Some sign highlighting customization
-        highlight GitGutterAdd ctermbg=green
-        highlight GitGutterChange ctermbg=yellow
-        highlight GitGutterChangeDelete ctermbg=yellow
-        highlight GitGutterDelete ctermbg=red
-
-        " https://github.com/airblade/vim-gitgutter/issues/260
-        function! PrevHunkWrap(count)
-          for i in range(1, a:count)
-            let line = line('.')
-            silent GitGutterPrevHunk
-            if line('.') == line
-              normal G
-              silent GitGutterPrevHunk
-            endif
-          endfor
-        endfunction
-
-        function! NextHunkWrap(count)
-          for i in range(1, a:count)
-            let line = line('.')
-            silent GitGutterNextHunk
-            if line('.') == line
-              normal 1G
-              silent GitGutterNextHunk
-            endif
-          endfor
-        endfunction
-
-        command -count=1 Phw call PrevHunkWrap(<count>)
-        command -count=1 Nhw call NextHunkWrap(<count>)
-        nnoremap <buffer> [c :Phw<CR>
-        nnoremap <buffer> ]c :Nhw<CR>
+        highlight GitGutterAdd          ctermfg=black ctermbg=green
+        highlight GitGutterChange       ctermfg=black ctermbg=yellow
+        highlight GitGutterChangeDelete ctermfg=black ctermbg=brown
+        highlight GitGutterDelete       ctermfg=black ctermbg=red
 
     endif
 

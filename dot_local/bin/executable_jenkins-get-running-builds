@@ -1,0 +1,44 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+    echo "Usage:   $(basename "$0") <job> [PARAM1=val1...]" >&2
+    echo "Example: $(basename "$0") build" >&2
+    echo "Example: $(basename "$0") build STREAM=4.11" >&2
+    exit 1
+fi
+
+job=$1; shift
+
+jenkins_uid=$(oc get sa jenkins -o jsonpath="{.metadata.uid}")
+token_data=$(oc get secrets -o json | jq -r "[.items[] | select(
+    .type == \"kubernetes.io/service-account-token\" and
+    .metadata.annotations[\"kubernetes.io/service-account.name\"] == \"jenkins\" and
+    .metadata.annotations[\"kubernetes.io/service-account.uid\"] == \"${jenkins_uid}\"
+)] | .[0].data.token" | base64 -d)
+jenkins_url=$(oc get route jenkins -o jsonpath="{.spec.host}")
+
+job_api_url="https://${jenkins_url}/job/${job}/api/json?tree=builds[number,description,result]"
+job_state=$(curl -gs -H "Authorization: Bearer ${token_data}" "${job_api_url}")
+running_builds=$(jq '[.builds[] | select(.result == null)]' <<< "${job_state}")
+
+if [ $# -eq 0 ]; then
+    jq -r '.[] | "#" + (.number | tostring) + ": " + (.description)' <<< "${running_builds}"
+    exit 0
+fi
+
+build_has_params() {
+    while [ $# -ne 0 ]; do
+        local param=$1; shift
+        grep -q "^$param$" <<< "${params}"
+    done
+}
+
+for buildnum in $(jq .[].number <<< "${running_builds}"); do
+    build_api_url="https://${jenkins_url}/job/${job}/${buildnum}/api/json?tree=number,description,actions[parameters[name,value]]"
+    build_state=$(curl -gs -H "Authorization: Bearer ${token_data}" "${build_api_url}")
+    params=$(jq -r '.actions[].parameters // [] | .[] | (.name) + "=" + (.value | tostring)' <<< "${build_state}")
+    if build_has_params "$@"; then
+        jq -r '"#" + (.number | tostring) + ": " + (.description)' <<< "${build_state}"
+    fi
+done

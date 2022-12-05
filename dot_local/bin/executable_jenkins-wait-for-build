@@ -1,0 +1,40 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ $# -ne 2 ]; then
+    echo "Usage:   $(basename "$0") <job> <build number>" >&2
+    echo "Example: $(basename "$0") release 11" >&2
+    exit 1
+fi
+
+job=$1; shift
+buildnum=$1; shift
+
+jenkins_uid=$(oc get sa jenkins -o jsonpath="{.metadata.uid}")
+token_data=$(oc get secrets -o json | jq -r "[.items[] | select(
+    .type == \"kubernetes.io/service-account-token\" and
+    .metadata.annotations[\"kubernetes.io/service-account.name\"] == \"jenkins\" and
+    .metadata.annotations[\"kubernetes.io/service-account.uid\"] == \"${jenkins_uid}\"
+)] | .[0].data.token" | base64 -d)
+jenkins_url=$(oc get route jenkins -o jsonpath="{.spec.host}")
+api_url="https://${jenkins_url}/job/${job}/${buildnum}/api/json"
+
+# for convenience
+echo "Console:   https://${jenkins_url}/job/${job}/${buildnum}/console"
+echo "BlueOcean: https://${jenkins_url}/blue/organizations/jenkins/${job}/detail/build/${buildnum}/pipeline"
+
+prev_description=
+while true; do
+    state=$(curl -s -H "Authorization: Bearer ${token_data}" "${api_url}")
+    result=$(jq -r .result <<< "$state")
+    description=$(jq -r .description <<< "$state")
+    if [ "${description}" != null ] && [ "${description}" != "${prev_description}" ]; then
+        echo "Description: ${description}" >&2
+        prev_description=$description
+    fi
+    case "${result}" in
+        null) sleep 5; continue;;
+        SUCCESS) echo "Build completed successfully" >&2; exit 0;;
+        *) echo "Build did not complete successfully (${result})" >&2; exit 1;;
+    esac
+done

@@ -1,10 +1,3 @@
-# .bashrc
-
-# Source global definitions
-if [ -f /etc/bashrc ]; then
-	. /etc/bashrc
-fi
-
 # Expand dir env vars on tab
 shopt -s direxpand
 
@@ -239,35 +232,7 @@ function stdprompt_gitbranch() { # $1 = color
 	echo -n "\[\033[0m\]"
 }
 
-# calculate it once since it's not likely to change in one session
-__in_containerenv=no
-if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
-	__in_containerenv=yes
-	if [ -s /run/.containerenv ]; then
-		__containername=$(. /run/.containerenv && echo $name)
-	fi
-fi
-
-# modified from https://unix.stackexchange.com/a/27014
-function milliseconds_to_human_short {
-    local T=$1
-    local D=$((T/1000/60/60/24))
-    local H=$((T/1000/60/60%24))
-    local M=$((T/1000/60%60))
-    local S=$((T/1000%60))
-    local MIL=$((T%1000))
-    (( D == 0 )) || printf '%dd' $D
-    (( H == 0 )) || printf '%dh' $H
-    (( M == 0 )) || printf '%dm' $M
-    if (( S != 0 )) || (( MIL != 0 )); then
-        printf '%02d' $S
-        (( MIL == 0 )) || printf '.%03d' $MIL
-        printf 's'
-    fi
-}
-
 function stdprompt() {
-
 	local rc=$?
 
 	if [[ $__in_containerenv == no ]]; then

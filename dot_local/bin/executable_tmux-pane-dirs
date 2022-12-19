@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+# Opens every directory passed as arguments in a new tmux pane. This is useful
+# to then run with `synchronize-panes on`.
+
+for dir in "$@"; do
+    tmux split-window -v -c "${dir}" -l 999
+done

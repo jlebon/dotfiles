@@ -2,13 +2,14 @@
 	ui = true
 	# We use always here instead of auto because otherwise
 	# we don't get any coloring with Ggrep in vim.
-	grep = always
+	# DISABLED: breaks `git jump grep`
+	#grep = always
 [color "grep"]
 	linenumber = green
 	match = red bold
 	filename = magenta
 [merge]
-	conflictstyle=diff3
+	conflictstyle=zdiff3
 [user]
 	name = Jonathan Lebon
 	email = jonathan@jlebon.com
@@ -75,6 +76,7 @@
 	rebase = true
 [push]
 	default = simple
+	autoSetupRemote = true
 [diff]
 	algorithm = histogram
 	renames = copies
@@ -82,8 +84,6 @@
 	compactionHeuristic = true
 	renameLimit = 791
 	tool = difftastic
-#	colorMoved = zebra
-#	colorMovedWS = allow-indentation-change
 [difftool]
 	prompt = false
 [difftool "difftastic"]
@@ -100,43 +100,27 @@
 	verbose = true
 #[interactive]
 #	diffFilter = diff-highlight
-[pager]
-	#log  = delta --file-style box --syntax-theme GitHub
-	#show = delta --file-style box --syntax-theme GitHub
-	#diff = delta --file-style box --syntax-theme GitHub
-	#log  = diff-highlight | less
-	#show = diff-highlight | less
-	#diff = diff-highlight | less
-	# XXX: panics on SIGPIPE when exiting
-	#log  = diff-highlight-rs | less
-	#show = diff-highlight-rs | less
-	#diff = diff-highlight-rs | less
-	# cool, but using --pattern override -X, which means it always clears the
-	# screen even if it's a small diff
-#	show = diff-highlight | less --tabs=4 -RFX --pattern '^(commit|diff --git)'
-#	diff = diff-highlight | less --tabs=4 -RFX --pattern '^(commit|diff --git)'
-#[color "diff-highlight"]
-#	oldNormal    = "black #f8cbcb"
-#	oldHighlight = "black #ff8888"
-#	newNormal    = "black #cbeecb"
-#	newHighlight = "black #aaffaa"
-#[color "diff"]
-#	oldMoved            = "black #f8cbcb"
-#	newMoved            = "black #cbeecb"
-#	oldMovedAlternative = "black #ff8888"
-#	newMovedAlternative = "black #aaffaa"
-#[color "diff"]
-#	old    = "black #f8cbcb"
-#	new    = "black #cbeecb"
-[color "diff-highlight"]
-	oldNormal    = "red"
-	oldHighlight = "black #fbaaaa"
-	newNormal    = "green"
-	newHighlight = "black #b3eeab"
+[core]
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[add.interactive]
+	useBuiltin = false # required for git 2.37.0
+[delta]
+	navigate = true # use n and N to move between diff sections
+	light = true    # set to true if you're in a terminal w/ a light background color (e.g. the default macOS terminal)
+	file-decoration-style = blue box bold
+	hunk-header-decoration-style = hidden
+	#width = variable
+	hunk-header-line-number-style = red bold
+	hunk-header-style = line-number syntax bold ul
 [rebase]
 	autostash = true
+	updateRefs = true
 [grep]
 	lineNumber = true
 [init]
 	templateDir = ~/.git_templates
 	defaultBranch = main
+[advice]
+	skippedCherryPicks = false

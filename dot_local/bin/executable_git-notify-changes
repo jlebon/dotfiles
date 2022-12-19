@@ -5,45 +5,70 @@ set -euo pipefail
 POLLING_INTERVAL_SECS=10
 
 main() {
-    local ref=${1:-}
-    local remote url
-    remote=$(get_upstream_remote)
-    url=$(git ls-remote --get-url "${remote}")
-
-    if [ -z "${ref}" ]; then
-        ref=$(get_default_branch "${remote}")
+    local ref
+    if [ $# -eq 0 ]; then
+        ref=$(git branch --show-current)
+        if [ -z "${ref}" ]; then
+            echo "error: not currently on any ref" >&2
+            return 1
+        fi
+    elif [ $# -eq 1 ]; then
+        ref=$1
+    else
+        echo "error: too many arguments" >&2
+        return 1
     fi
 
-    local sha new_sha
-    sha=$(resolve_remote_ref "${remote}" "${ref}")
-    echo "Watching ref ${ref} at ${url} for changes..."
-    echo "${ref}: ${sha}"
+    local remote remote_ref
+    remote=$(get_remote_for_ref "${ref}")
+    remote_ref=$(get_remote_ref_for_ref "${ref}")
+
+    local url
+    url=$(git ls-remote --get-url "${remote}")
+
+    local sha
+    sha=$(resolve_remote_ref "${remote}" "${remote_ref}")
+
+    local local_sha
+    local_sha=$(git show --format='format:%H' "${ref}")
+
+    if [ "${sha}" != "${local_sha}" ]; then
+        echo "note: local ref is not up to date" >&2
+    fi
+
+    echo "Watching ${remote_ref} at ${url} for changes..."
+    echo "${remote_ref}: ${sha}"
+
+    local new_sha
     while sleep "${POLLING_INTERVAL_SECS}"; do
-        new_sha=$(resolve_remote_ref "${remote}" "${ref}")
+        new_sha=$(resolve_remote_ref "${remote}" "${remote_ref}")
         if [ "$sha" != "$new_sha" ]; then
-            echo "${ref}: ${new_sha}"
+            echo "${remote_ref}: ${new_sha}"
             exit 0
         fi
     done
 }
 
-get_upstream_remote() {
-    # prefer 'upstream' over 'origin'
-    remotes=$(git remote)
-    for remote in upstream origin; do
-        if grep -q $remote <<< "$remotes"; then
-            echo $remote
-            return
-        fi
-    done
-    return 1
+get_remote_for_ref() {
+    local ref=$1; shift
+    local exists
+    exists=$(git branch --list "${ref}")
+    if [ -z "${exists}" ]; then
+        echo "error: no ref named '${ref}' found" >&2
+        return 1
+    fi
+    local remote
+    remote=$(git branch --list "${ref}" --format '%(upstream:remotename)')
+    if [ -z "${remote}" ]; then
+        echo "error: ref '${ref}' is not tracking a remote ref" >&2
+        return 1
+    fi
+    echo "${remote}"
 }
 
-get_default_branch() {
-    local remote=$1; shift
-    local ref
-    ref=$(git symbolic-ref "refs/remotes/$remote/HEAD")
-    echo "${ref#refs/remotes/upstream/}"
+get_remote_ref_for_ref() {
+    local ref=$1; shift
+    git branch --list "${ref}" --format '%(upstream:remoteref)'
 }
 
 resolve_remote_ref() {

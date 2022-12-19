@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Paste the contents of the clipboard, but slowly. This is useful for pasting
+# into the GRUB menu on the QEMU serial console.
+
 clipboard=$(xsel -bo)
 for (( i=0; i<${#clipboard}; i++ )); do
   tmux send-keys "${clipboard:$i:1}"

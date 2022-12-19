@@ -1,0 +1,48 @@
+#!/bin/bash
+set -euo pipefail
+
+# Uses the GitHub API to find the PR for a given commit.
+# https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#list-pull-requests-associated-with-a-commit
+
+# Adapted from a function originally written by Dusty Mabe.
+
+main() {
+    local commit repo
+    commit=$(git rev-parse "${1}")
+    repo=$(get_github_repo)
+    local api_url="https://api.github.com/repos/${repo}/commits/${commit}/pulls"
+    curl -s "$api_url" | jq -r .[].html_url
+}
+
+get_github_repo() {
+    local remote url
+    remote=$(find_remote)
+    url=$(git ls-remote --get-url "${remote}")
+
+    if [[ $url == git@github.com:* ]]; then
+        local repo=${url#*:}
+    elif [[ $url == https://github.com/* ]] || \
+         [[ $url == http://github.com/* ]]; then
+        local repo=${url#*.com/}
+    else
+        echo "ERROR: Unknown GitHub URL $url" >&2
+        exit 1
+    fi
+
+    repo=${repo%.git}
+    echo "${repo}"
+}
+
+find_remote() {
+    # prefer 'upstream' over 'origin'
+    remotes=$(git remote)
+    for remote in upstream origin; do
+        if grep -q $remote <<< "$remotes"; then
+            echo $remote
+            return
+        fi
+    done
+    return 1
+}
+
+main "$@"

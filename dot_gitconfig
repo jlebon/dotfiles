@@ -38,6 +38,7 @@
 	# super hacky way to find the "default" upstream branch, which may not be master
 	cm = "!f() { git checkout $(basename $(cut -f2 -d' ' .git/refs/remotes/upstream/HEAD 2>/dev/null || cut -f2 -d' ' .git/refs/remotes/origin/HEAD 2>/dev/null || echo master)); }; f"
 	rlog = ! sh -c 'git log --reverse --ancestry-path $1^..HEAD' - 2>/dev/null
+	clip = "!f() { : git log ; git log -1 --format=%B ${1:-HEAD} | xsel -ib; }; f"
 	rei = rebase -i
 	rec = "!f() { git up && git rebase --continue; }; f"
 	rea = rebase --abort

@@ -257,6 +257,8 @@ set splitbelow
 " Rebuild cscope database with F9
 nnoremap <silent> <F9> :!cs build<CR>:cs reset<CR><CR>
 
+command GitPermalink execute ":!git permalink %:p " . line(".")
+
 command! Cnext try | cnext | catch | cfirst | endtry
 command! Cprev try | cprev | catch | clast | endtry
 

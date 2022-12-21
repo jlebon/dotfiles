@@ -1,0 +1,105 @@
+#!/bin/bash
+set -euo pipefail
+
+# Get the source forge permalink to the given file and optional line number.
+# It can be used from Vim by defining a command that passes the filename and
+# line number. E.g.:
+#
+#   command GitPermaLink execute ":!git permalink %:p " . line(".")
+
+main() {
+    if [ $# -lt 1 ]; then
+        echo "Usage: git permalink <FILE> [LINENO]" >&2
+        exit 1
+    fi
+
+    local file=$1; shift
+    local lineno=${1:-}
+
+    cd "$(dirname "${file}")"
+    file=$(make_relative_to_git_repo "${file}")
+
+    local rev
+    rev=$(git rev-parse HEAD)
+
+    local remote_url base repo
+    remote_url=$(get_remote_url)
+    base=$(parse_base "${remote_url}")
+    repo=$(parse_repo "${remote_url}")
+
+    if [[ $base == *pagure* ]] || [[ $base == *fedoraproject.org* ]]; then
+        file="f/${file}"
+    fi
+    echo "https://${base}/${repo}/blob/${rev}/${file}${lineno:+#L${lineno}}"
+}
+
+make_relative_to_git_repo() {
+    local path=$1; shift
+    # make sure it's absolute
+    path=$(realpath "${path}")
+
+    local parent_dir
+    parent_dir=$(dirname "${path}")
+    local git_dir
+    git_dir=$(cd "${parent_dir}" && git rev-parse --show-toplevel)
+
+    echo "${path#"${git_dir}/"}"
+}
+
+get_remote_url() {
+    local remote url
+    remote=$(find_remote)
+    git ls-remote --get-url "${remote}"
+}
+
+find_remote() {
+    # prefer 'upstream' over 'origin'
+    remotes=$(git remote)
+    for remote in upstream origin; do
+        if grep -q $remote <<< "$remotes"; then
+            echo $remote
+            return
+        fi
+    done
+    return 1
+}
+
+parse_repo() {
+    local url=$1; shift
+
+    if [[ $url == ssh://*@*/* ]]; then
+        local repo=${url#ssh://*@*/}
+    elif [[ $url == git@*:* ]]; then
+        local repo=${url#*:}
+    elif [[ $url == https://*/* ]]; then
+        local repo=${url#https://*/}
+    else
+        echo "ERROR: Unknown URL $url" >&2
+        exit 1
+    fi
+
+    repo=${repo%.git}
+    echo "${repo}"
+}
+
+parse_base() {
+    local url=$1; shift
+
+    if [[ $url == ssh://*@*/* ]]; then
+        local base=${url#ssh://*@}
+        base=${base%%/*}
+    elif [[ $url == git@*:* ]]; then
+        local base=${url#git@}
+        base=${base%:*}
+    elif [[ $url == https://*/* ]]; then
+        local base=${url#https://}
+        base=${base%%/*}
+    else
+        echo "ERROR: Unknown URL $url" >&2
+        exit 1
+    fi
+
+    echo "${base}"
+}
+
+main "$@"

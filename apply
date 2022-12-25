@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+# This script can be used from a Fedora container to add myself as a user,
+# install a few bare neccesities, apply my chezmoi configuration and transform
+# into a shell.
+
 install_specs=()
 for cmd in git passwd tmux vim; do
     if ! command -v "${cmd}" &>/dev/null; then

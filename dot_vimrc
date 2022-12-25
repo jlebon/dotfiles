@@ -255,6 +255,9 @@ set splitright
 set splitbelow
 
 " Rebuild cscope database with F9
+if filereadable(expand("~/.cscope/cscope.out"))
+    silent cs add ~/.cscope/cscope.out
+endif
 nnoremap <silent> <F9> :!cs build<CR>:cs reset<CR><CR>
 
 command GitPermalink execute ":!git permalink %:p " . line(".")

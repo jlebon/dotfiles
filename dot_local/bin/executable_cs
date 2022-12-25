@@ -1,0 +1,101 @@
+#!/usr/bin/python3
+
+import argparse
+import os
+import sys
+import os.path
+
+CSCOPE_DIR = os.path.expanduser("~/.cscope/")
+
+
+def main():
+    args = parse_args()
+    args.func(args)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers(dest='cmd', title='subcommands')
+    subparsers.required = True
+
+    add = subparsers.add_parser('add', help='add source directory')
+    add.add_argument('path', help='path to source directory')
+    add.set_defaults(func=cmd_add)
+    remove = subparsers.add_parser('remove', help='remove source directory')
+    remove.add_argument('path', help='path to source directory')
+    remove.set_defaults(func=cmd_remove)
+    show = subparsers.add_parser('show', help='show source directories')
+    show.set_defaults(func=cmd_show)
+    build = subparsers.add_parser('build', help='rescan source directories')
+    build.set_defaults(func=cmd_build)
+    return parser.parse_args()
+
+
+def cmd_add(args):
+    if not os.path.isdir(args.path):
+        raise Exception(f"{args.path} is not a directory")
+    sources = read_sources()
+    sources.add(os.path.realpath(args.path))
+    write_sources(sources)
+    build_cscope_for_sources(sources)
+
+
+def cmd_remove(args):
+    if not os.path.isdir(args.path):
+        raise Exception(f"{args.path} is not a directory")
+    sources = read_sources()
+    try:
+        sources.remove(os.path.realpath(args.path))
+    except KeyError:
+        return
+    write_sources(sources)
+    build_cscope_for_sources(sources)
+
+
+def cmd_show(args):
+    sources = read_sources()
+    print('\n'.join(sorted(sources)))
+
+
+def cmd_build(args):
+    sources = read_sources()
+    build_cscope_for_sources(sources)
+
+
+def build_cscope_for_sources(sources):
+    if len(sources) == 0:
+        print("No source directories defined")
+        return
+
+    print("Building cscope database for:")
+    print('\n'.join(sorted(sources)))
+
+    # XXX: make cleaner
+    os.chdir(CSCOPE_DIR)
+    os.system("find %s -type f -a \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.cxx' \) > cscope.files" % ' '.join(sources))
+    os.system("cscope -b -q")
+
+
+def read_sources():
+    sources = set()
+    try:
+        with open(os.path.join(CSCOPE_DIR, "sources"), 'r') as f:
+            for source in f:
+                source = source.strip()
+                if len(source) == 0:
+                    continue
+                sources.add(source)
+    except FileNotFoundError:
+        pass
+    return sources
+
+
+def write_sources(sources):
+    os.makedirs(CSCOPE_DIR, exist_ok=True)
+    with open(os.path.join(CSCOPE_DIR, "sources"), 'w') as f:
+        f.write('\n'.join(sorted(sources)))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

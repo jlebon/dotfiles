@@ -1,0 +1,4 @@
+# This file ensures that the following files are not applied by chezmoi.
+
+README.md
+apply

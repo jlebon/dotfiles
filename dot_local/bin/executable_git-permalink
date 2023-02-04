@@ -16,6 +16,9 @@ main() {
     local file=$1; shift
     local lineno=${1:-}
 
+    # make sure it's absolute
+    file=$(realpath "${file}")
+
     cd "$(dirname "${file}")"
     file=$(make_relative_to_git_repo "${file}")
 
@@ -34,16 +37,13 @@ main() {
 }
 
 make_relative_to_git_repo() {
-    local path=$1; shift
-    # make sure it's absolute
-    path=$(realpath "${path}")
-
+    local abspath=$1; shift
     local parent_dir
-    parent_dir=$(dirname "${path}")
+    parent_dir=$(dirname "${abspath}")
     local git_dir
     git_dir=$(cd "${parent_dir}" && git rev-parse --show-toplevel)
 
-    echo "${path#"${git_dir}/"}"
+    echo "${abspath#"${git_dir}/"}"
 }
 
 get_remote_url() {

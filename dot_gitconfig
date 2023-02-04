@@ -28,6 +28,7 @@
 	upstream = reset --hard upstream/master
 	last = log -1 HEAD
 	ck = checkout
+	cki = "!f() { b=$(git branch --format='%(refname:lstrip=2)' --sort=-committerdate | fzf --preview-window=70% --preview 'git lg --color=always {}'); [[ -z $b ]] || git checkout $b; }; f"
 	wt = worktree
 	wtl = worktree list
 	amend = commit --amend
@@ -51,6 +52,7 @@
 	la = log --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lg = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lc = log --pretty=format:'%Cred%ad %Cblue%an %C(yellow)%h %Creset(\"%s\")' --date=short
+	lgi = "!f() { : git log ; git log-interactive \"$@\"; }; f"
 	h = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 10
 	hh = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 20
 	up = add -u
@@ -104,6 +106,7 @@
 #	diffFilter = diff-highlight
 [core]
 	pager = delta
+	# commentchar = |
 [interactive]
 	diffFilter = delta --color-only
 [add.interactive]

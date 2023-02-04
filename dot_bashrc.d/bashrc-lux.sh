@@ -24,37 +24,30 @@ else
     VIM=vi
 fi
 
-export EDITOR=$VIM
-export VISUAL=$VIM
-unset VIM
+#export EDITOR=$VIM
+#export VISUAL=$VIM
+#unset VIM
 
-function whichpkg() {
-	local file
-	if ! file=$(which "$1"); then
-		return
-	fi
-
-	# could be an alias/something not a file
-	if [ ! -e "$file" ]; then
-		which "$1"
-	else
-		rpm -qf "$file"
-	fi
-}
+export EDITOR=hx
+export VISUAL=hx
 
 alias findx='sudo find / -mount -iname'
 
 alias t='tmux'
 alias ta='tmux attach'
 
-alias g='grepx'
-alias gg='gitgrepx'
-alias gi='grepxi'
+alias g='rgi'
+# alias gg='gitgrepx'
+# alias gi='grepxi'
 
 alias domlist='virsh list --all'
 alias domstart='virsh start'
 
-alias bell='echo -ne "\a"'
+function bell {
+	local rc=$?
+	echo -ne '\a'
+	return $rc
+}
 
 alias rost='rpm-ostree'
 alias ocw='oc get pods --watch'
@@ -117,10 +110,8 @@ function mkgitalias_indirect {
 
 mkgitalias gits status
 mkgitalias gitb branch
-mkgitalias gita add
 mkgitalias gite edit
 mkgitalias gitc commit
-mkgitalias_indirect gitls branch lsb
 
 # logging commands
 
@@ -128,6 +119,7 @@ mkgitalias gitl l
 mkgitalias gitla la
 mkgitalias gitlg lg
 mkgitalias gith hh
+mkgitalias_indirect gitlgi log lgi
 
 # diff commands
 

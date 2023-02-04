@@ -58,11 +58,13 @@ done
 
 cd -
 
-if [ -f /usr/bin/vimx ]; then
-    alias vim='vimx'
-    VIM=vimx
-else
-    VIM=vim
+if [ -z "${EDITOR}" ]; then
+	if [ -f /usr/bin/vimx ]; then
+		EDITOR=vimx
+	else
+		EDITOR=vim
+	fi
 fi
 
-$VIM $canonfiles
+
+$EDITOR $canonfiles

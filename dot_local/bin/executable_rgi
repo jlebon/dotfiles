@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "Usage: rgi [OPTIONS] <pattern>" >&2
+    exit 1
+fi
+
+query=$1; shift
+
+# Based on https://github.com/junegunn/fzf/issues/1750#issue-521031164.
+call_fzf() {
+    RG="rg -g !.git -g !vendor -g !worktrees --hidden --column --line-number --no-heading --color=always --smart-case $@"
+    FZF_DEFAULT_COMMAND="$RG '$query'" fzf --ansi --disabled -m -d : \
+        --bind "change:reload:$RG {q} || true" --query "$query" \
+        --preview 'bat --plain --color always --highlight-line {2} {1}' --preview-window '+{2}/2' \
+        --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
+        --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+}
+
+lines=$(call_fzf "$@")
+
+exec hx $(cut -f1-3 -d: <<< "${lines}")

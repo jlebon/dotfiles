@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euo pipefail
+
+# Based on https://github.com/junegunn/fzf.vim/issues/211#issuecomment-497943378.
+# Some explanations:
+#  - The `-d ' ' --nth 4..` is to not search within the commit hash and date.
+#  - The `$(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1)` trick used multiple
+#    times is to extract the commit hash from a line. The `head -n1` is in case
+#    the commit title mentions another hash. We could use field indexes, but
+#    it won't work well in repos where the graph isn't linear. XXX: change the
+#    output of `git lg` so we can cut it up better.
+#  - The `ctrl-r:+reload` syntax means that the binding is additive rather
+#    than replacing (after editing the commit message, we want to reload).
+
+export FZF_DEFAULT_COMMAND="git lg --color=always $@"
+fzf --ansi --no-sort --reverse --tiebreak=index -d ' ' --nth 4.. \
+  --header 'View: Enter | Reload: C-S | Reload at commit: C-Space | Edit files: C-H | Edit commit: C-R | Rebase: Ctrl-B' \
+  --preview 'git show --color=always $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1)' \
+  --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
+  --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
+  --bind 'enter:execute(git show --color=always $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1) | less -R)' \
+  --bind 'ctrl-space:execute(git lgi $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
+  --bind 'ctrl-h:execute(git edit $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
+  --bind 'ctrl-r:execute(git reword $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
+  --bind "ctrl-r:+reload:${FZF_DEFAULT_COMMAND}" \
+  --bind 'ctrl-b:execute(git rebase -i $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
+  --bind "ctrl-b:+reload:${FZF_DEFAULT_COMMAND}" \
+  --bind "ctrl-s:reload:${FZF_DEFAULT_COMMAND}"

@@ -18,8 +18,8 @@ RG="rg -g !.git -g !vendor -g !worktrees --hidden --column --line-number --no-he
 
 # shellcheck disable=SC2016
 FZF_DEFAULT_COMMAND="[ -z '$q' ] || $RG -- '$q' || :" fzf --ansi --disabled -m -d : \
+  --bind "change:reload([ -z {q} ] || $RG -- {q} || :)" --query "$q" --prompt 'regex> ' \
   --header 'Edit: Enter | View: C-Space | Toggle preview: C-/' --header-first \
-  --bind "change:reload([ -z {q} ] || $RG -- {q} || :)" --query "$q" \
   --preview 'bat --plain --color always --highlight-line {2} {1}' --preview-window '+{2}/2' \
   --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \

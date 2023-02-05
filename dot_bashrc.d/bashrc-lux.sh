@@ -37,8 +37,6 @@ alias t='tmux'
 alias ta='tmux attach'
 
 alias g='rgi'
-# alias gg='gitgrepx'
-# alias gi='grepxi'
 
 alias domlist='virsh list --all'
 alias domstart='virsh start'

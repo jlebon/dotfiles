@@ -52,6 +52,7 @@
 	la = log --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lg = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lc = log --pretty=format:'%Cred%ad %Cblue%an %C(yellow)%h %Creset(\"%s\")' --date=short
+	quote = log -n 1 --pretty=format:'%h (\"%s\")'
 	lgi = "!f() { : git log ; git log-interactive \"$@\"; }; f"
 	h = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 10
 	hh = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 20

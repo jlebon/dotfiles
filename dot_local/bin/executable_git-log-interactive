@@ -3,26 +3,24 @@ set -euo pipefail
 
 # Based on https://github.com/junegunn/fzf.vim/issues/211#issuecomment-497943378.
 # Some explanations:
-#  - The `-d ' ' --nth 4..` is to not search within the commit hash and date.
-#  - The `$(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1)` trick used multiple
-#    times is to extract the commit hash from a line. The `head -n1` is in case
-#    the commit title mentions another hash. We could use field indexes, but
-#    it won't work well in repos where the graph isn't linear. XXX: change the
-#    output of `git lg` so we can cut it up better.
+#  - The `-d '\x00' --nth 4,6` is to only search within the author and commit
+#    message fields. Fields are determined using the %x00 chars we inject.
+#  - The `[ -z {2} ] || ...` syntax is to no-op correctly if on a line with
+#    no commit info, which happens in graph output.
 #  - The `ctrl-r:+reload` syntax means that the binding is additive rather
 #    than replacing (after editing the commit message, we want to reload).
 
-export FZF_DEFAULT_COMMAND="git lg --color=always $@"
-fzf --ansi --no-sort --reverse --tiebreak=index -d ' ' --nth 4.. \
+export FZF_DEFAULT_COMMAND="git log --graph --pretty=format:'%C(yellow)%x00%h%x00 %Cred%ad %x00%Cblue%an%Cgreen%x00%d %x00%Creset%s' --date=short --color=always $@"
+fzf --ansi --no-sort --reverse --tiebreak=index -d '\x00' --nth 4,6  \
   --header 'View: Enter | Reload: C-S | Reload at commit: C-Space | Edit files: C-H | Edit commit: C-R | Rebase: Ctrl-B' \
-  --preview 'git show --color=always $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1)' \
+  --preview '[ -z {2} ] || git show --color=always {2}' \
   --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
-  --bind 'enter:execute(git show --color=always $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1) | less -R)' \
-  --bind 'ctrl-space:execute(git lgi $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
-  --bind 'ctrl-h:execute(git edit $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
-  --bind 'ctrl-r:execute(git reword $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
+  --bind 'enter:execute([ -z {2} ] || git show --color=always {2} | less -R)' \
+  --bind 'ctrl-space:execute([ -z {2} ] || git lgi {2})' \
+  --bind 'ctrl-h:execute([ -z {2} ] || git edit {2})' \
+  --bind 'ctrl-r:execute([ -z {2} ] || git reword {2})' \
   --bind "ctrl-r:+reload:${FZF_DEFAULT_COMMAND}" \
-  --bind 'ctrl-b:execute(git rebase -i $(grep -o "[a-f0-9]\{7,\}" <<< {} | head -n1))' \
+  --bind 'ctrl-b:execute([ -z {2} ] || git rebase -i {2})' \
   --bind "ctrl-b:+reload:${FZF_DEFAULT_COMMAND}" \
   --bind "ctrl-s:reload:${FZF_DEFAULT_COMMAND}"

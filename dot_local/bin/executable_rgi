@@ -1,23 +1,28 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ $# -eq 0 ]; then
-    echo "Usage: rgi [OPTIONS] <pattern>" >&2
-    exit 1
-fi
-
-query=$1; shift
-
 # Based on https://github.com/junegunn/fzf/issues/1750#issue-521031164.
-call_fzf() {
-    RG="rg -g !.git -g !vendor -g !worktrees --hidden --column --line-number --no-heading --color=always --smart-case $@"
-    FZF_DEFAULT_COMMAND="$RG '$query'" fzf --ansi --disabled -m -d : \
-        --bind "change:reload:$RG {q} || true" --query "$query" \
-        --preview 'bat --plain --color always --highlight-line {2} {1}' --preview-window '+{2}/2' \
-        --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
-        --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up'
-}
+# XXX: support regular rg output?
+# Some explanations:
+#  - We use FZF_DEFAULT_COMMAND instead of piping so that the command is owned
+#    and interruptable by fzf.
+#  - We disabled searching if the query string is empty.
+#  - The `|| :` syntax is so fzf doesn't report an error if rg finds nothing.
+#  - We use `execute()` to spawn the editor instead of exiting fzf with the
+#    results so that previewing works (otherwise, stdout isn't a terminal, so
+#    e.g. `less` won't work).
 
-lines=$(call_fzf "$@")
+q=${1:-}; shift || :
 
-exec hx $(cut -f1-3 -d: <<< "${lines}")
+RG="rg -g !.git -g !vendor -g !worktrees --hidden --column --line-number --no-heading --trim --color=always --smart-case $*"
+
+# shellcheck disable=SC2016
+FZF_DEFAULT_COMMAND="[ -z '$q' ] || $RG -- '$q' || :" fzf --ansi --disabled -m -d : \
+  --header 'Edit: Enter | View: C-Space | Toggle preview: C-/' --header-first \
+  --bind "change:reload([ -z {q} ] || $RG -- {q} || :)" --query "$q" \
+  --preview 'bat --plain --color always --highlight-line {2} {1}' --preview-window '+{2}/2' \
+  --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
+  --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
+  --bind 'enter:execute(hx $(cut -f1-3 -d: {+f}))+abort' \
+  --bind 'ctrl-space:execute(bat --color=always --highlight-line {2} {1} | less +{2} -j .5 -R)' \
+  --bind 'ctrl-/:toggle-preview'

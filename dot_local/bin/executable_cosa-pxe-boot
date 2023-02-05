@@ -1,0 +1,64 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ ! -d "builds" ]; then
+  echo "No builds/ dir found; must run from a cosa dir." >&2
+  exit 1
+fi
+
+tmpd=$(mktemp -d)
+trap 'rm -rf ${tmpd}' EXIT
+
+tftpdir="${tmpd}/tftp"
+mkdir "${tftpdir}"
+
+kernel=$(ls builds/latest/x86_64/*-live-kernel-x86_64)
+initrd=$(ls builds/latest/x86_64/*-live-initramfs.x86_64.img)
+rootfs=$(ls builds/latest/x86_64/*-live-rootfs.x86_64.img)
+metal=$(ls builds/latest/x86_64/*-metal.x86_64.raw)
+
+for f in "${kernel}" "${initrd}" "${rootfs}" "${metal}"; do
+  ln -s "$(realpath "${f}")" "${tftpdir}"
+done
+
+live_ign="/var/home/jlebon/Documents/igncfgs/config-autologin.ign"
+ln -s "${live_ign}" "${tftpdir}/pxe-live.ign" 
+
+# optionally append rootfs
+
+tftpipaddr=10.0.2.2
+networkdev=e1000
+pxeimagepath=/usr/share/syslinux
+
+# create http server
+port=$((1024 + RANDOM % 65535))
+setpriv --pdeathsig SIGKILL -- env -C "${tftpdir}" kola http-server --port "${port}" >/dev/null &
+# setpriv --pdeathsig SIGKILL -- kola http-server --port "${port}" >/dev/null &
+
+baseurl="http://${tftpipaddr}:${port}"
+
+kargs="console=ttyS0 ignition.firstboot ignition.platform.id=metal"
+kargs+=" rd.neednet=1 ignition.config.url=${baseurl}/pxe-live.ign"
+kargs+=" coreos.live.rootfs_url=${baseurl}/$(basename "${rootfs}")"
+
+# overlay=/srv/fcos/overlay.img
+# ln -s "${overlay}" "${tftpdir}"
+
+pxeconfigdir="${tftpdir}/pxelinux.cfg"
+mkdir "${pxeconfigdir}"
+cat > "${pxeconfigdir}/default" << EOF
+DEFAULT pxeboot
+LABEL pxeboot
+  KERNEL $(basename "${kernel}")
+  APPEND initrd=$(basename "${initrd}") ${kargs}
+  # APPEND initrd=$(basename "${initrd}"),overlay.img ${kargs}
+EOF
+
+for pxeimg in pxelinux.0 ldlinux.c32; do
+  cp "${pxeimagepath}/${pxeimg}" "${tftpdir}"
+done
+bootfile="/pxelinux.0"
+
+qemu-system-x86_64 -machine accel=kvm -cpu host -m 4G -smp 2 -nographic \
+  -device "${networkdev},netdev=eth0" -boot once=n \
+  -netdev "user,id=eth0,tftp=${tftpdir},bootfile=${bootfile}" "$@"

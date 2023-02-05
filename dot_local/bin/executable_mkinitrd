@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+dir=$1; shift
+output=$(realpath "$1"); shift
+
+cd "${dir}"
+find . -mindepth 1 -print0 | \
+  cpio -o -H newc -R root:root --null \
+    --quiet --reproducible --force-local -D . | \
+  gzip -1 >> "${output}"

@@ -387,10 +387,13 @@ function codedir() {
 }
 
 function fed() {
-    local dir=$(fedpkgx "$@")
-    if [ $? -eq 0 ]; then
-        code $(basename "$dir") sfp --rebuild
-    fi
+		local srpm=$1; shift
+		local target_dir=$__codepath/src.fedoraproject.org/rpms/$srpm
+		if [ -d "${target_dir}" ]; then
+			cd "${target_dir}" || return
+		elif fedpkg clone "${srpm}" "${target_dir}"; then
+      code "$(basename "$srpm")" sfp --rebuild
+		fi
 }
 
 export GOPATH=$__codepath/go

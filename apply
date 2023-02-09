@@ -18,15 +18,20 @@ if [ ${#install_specs[@]} -ne 0 ]; then
     sudo dnf install -y "${install_specs[@]}" --disablerepo "$(IFS=, ; echo "${disable_repos[*]}")"
 fi
 
-if [[ $(id -u) = 0 ]]; then
+TARGET_USER=$(id -un)
+if [[ $TARGET_USER = root ]]; then
     useradd -G wheel jlebon
     passwd --delete jlebon
+    TARGET_USER=jlebon
 fi
 
-cd ~jlebon
-sudo -u jlebon sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply jlebon
+eval "cd ~${TARGET_USER}"
+
+sudo -u "${TARGET_USER}" sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply jlebon
 # Assume we're already in a tmux session. This file is used by `.tmux.conf`.
-# Ideally we would detect automatically and get rid of this (TMUX isn't what we
-# need, since here we're running in a container).
-sudo -u jlebon touch .tmux.conf.nested
-exec sudo -i -u jlebon
+# Ideally we would detect automatically and get rid of this ($TMUX isn't what
+# we need, since here we're running in a container).
+sudo -u "${TARGET_USER}" touch .tmux.conf.nested
+
+# enter user shell; this ensures a bashrc reload if we're already that user
+exec sudo -i -u "${TARGET_USER}"

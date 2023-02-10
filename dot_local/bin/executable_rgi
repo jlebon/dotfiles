@@ -1,6 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
+## Ctrl-U/D:    scroll up/down
+## Alt-E/Y/U/D: scroll preview up/down
+## Enter:       edit files
+## Ctrl-Space:  view selected file
+## Ctrl-/:      toggle preview
+## Ctrl-S:      fuzzy search within rg results
+## Ctrl-R:      search in rg mode
+## F1:          view help
+
 # Based on https://github.com/junegunn/fzf/issues/1750#issue-521031164.
 # XXX: support regular rg output?
 # Some explanations:
@@ -17,12 +26,14 @@ q=${1:-}; shift || :
 RG="rg -g !.git -g !vendor -g !worktrees --hidden --column --line-number --no-heading --trim --color=always --smart-case $*"
 
 # shellcheck disable=SC2016
-FZF_DEFAULT_COMMAND="[ -z '$q' ] || $RG -- '$q' || :" fzf --ansi --disabled -m -d : \
-  --bind "change:reload([ -z {q} ] || $RG -- {q} || :)" --query "$q" --prompt 'regex> ' \
-  --header 'Edit: Enter | View: C-Space | Toggle preview: C-/' --header-first \
+FZF_DEFAULT_COMMAND="[ -z '$q' ] || $RG -e '$q' || :" fzf --ansi --disabled -m -d : \
+  --bind "change:reload([ -z {q} ] || $RG -e {q} || :)" --query "$q" --prompt 'regex> ' \
   --preview 'bat --plain --color always --highlight-line {2} {1}' --preview-window '+{2}/2' \
   --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
   --bind 'enter:execute(hx $(cut -f1-3 -d: {+f}))+abort' \
   --bind 'ctrl-space:execute(bat --color=always --highlight-line {2} {1} | less +{2} -j .5 -R)' \
-  --bind 'ctrl-/:toggle-preview'
+  --bind 'ctrl-/:toggle-preview' \
+  --bind 'ctrl-s:unbind(change)+clear-query+enable-search+change-prompt(fzf> )' \
+  --bind 'ctrl-r:rebind(change)+disable-search+change-prompt(regex> )' \
+  --bind "f1:execute(grep '^## ' '$0' | cut -f2- -d' ' | less)"

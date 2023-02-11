@@ -2,6 +2,8 @@
 set -euo pipefail
 
 echo "Resetting podman storage"
+podman rm --all -f
+podman rmi --all -f
 podman system reset -f
 
 echo "Pulling latest pet image"

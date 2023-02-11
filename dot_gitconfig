@@ -15,35 +15,28 @@
 	email = jonathan@jlebon.com
 	signingkey = 519CE313
 [alias]
-	lsb = "!f() { : git branch ; git bstatus \"$@\"; }; f"
-	format-one-patch = "!f() { : git format-patch ; git format-patch ${1}^..${1} \"$@\"; }; f"
+	lsb = "!f() { : git branch; git bstatus \"$@\"; }; f"
+	format-one-patch = "!f() { : git format-patch; git format-patch ${1}^..${1} \"$@\"; }; f"
 	d = diff
-	cam = commit -am
 	wip = commit -am "wip"
 	scrap = reset --hard HEAD
 	uncommit = reset HEAD^
 	rob = reset HEAD^
 	nuke = reset --hard HEAD^
-	origin = reset --hard origin/master
-	upstream = reset --hard upstream/master
 	last = log -1 HEAD
 	ck = checkout
-	cki = "!f() { b=$(git branch --format='%(refname:lstrip=2)' --sort=-committerdate | fzf --preview-window=70% --preview 'git lg --color=always {}'); [[ -z $b ]] || git checkout $b; }; f"
-	wt = worktree
-	wtl = worktree list
 	amend = commit --amend
 	amendpipe = -c core.commentchar=| commit --amend
 	amendit = commit --amend --no-edit
 	fix = commit --amend --no-edit -a
-	fixup = "!f() { : git commit ; git commit -a --fixup ${1:-HEAD}; }; f"
-	# super hacky way to find the "default" upstream branch, which may not be master
-	cm = "!f() { git checkout $(basename $(cut -f2 -d' ' .git/refs/remotes/upstream/HEAD 2>/dev/null || cut -f2 -d' ' .git/refs/remotes/origin/HEAD 2>/dev/null || echo master)); }; f"
+	fixup = "!f() { : git commit; git commit -a --fixup ${1:-HEAD}; }; f"
+	cm = "!git checkout $(git default)"
 	rlog = ! sh -c 'git log --reverse --ancestry-path $1^..HEAD' - 2>/dev/null
-	clip = "!f() { : git log ; git log -1 --format=%B ${1:-HEAD} | xsel -ib; }; f"
+	clip = "!f() { : git log; git log -1 --format=%B ${1:-HEAD} | xsel -ib; }; f"
 	rei = rebase -i
 	rec = "!f() { git up && git rebase --continue; }; f"
 	rea = rebase --abort
-	rem = rebase master
+	rem = "!git rebase -i $(git default)"
 	cp = cherry-pick
 	cpc = cherry-pick --continue
 	cpa = cherry-pick --abort
@@ -52,25 +45,26 @@
 	la = log --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lg = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lc = log --pretty=format:'%Cred%ad %Cblue%an %C(yellow)%h %Creset(\"%s\")' --date=short
-	quote = log -n 1 --pretty=format:'%h (\"%s\")'
-	lgi = "!f() { : git log ; git log-interactive \"$@\"; }; f"
+	# I use this from hx's `pipe` command.
+	quote = "!f() { : git log; xargs git log -n 1 --pretty=format:'%h (\"%s\")'; }; f"
+	lgi = "!f() { : git log; git log-interactive \"$@\"; }; f"
+	lai = "!f() { : git log; NO_GRAPH=1 git log-interactive \"$@\"; }; f"
 	h = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 10
 	hh = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 20
 	up = add -u
+	bi = branch-interactive
 
 	# same as git stash show, except you can just give the stash index number
 	# defaults to git stash list if no index number given
 	# also shows untracked stashed files (if any), which are kept in the third parent of the commit
 	stashow = "!f() { set -e; if [ $# -eq 0 ]; then git stash list; else ( git show --color=always stash@{$1}; if git rev-parse --verify --quiet stash@{$1}^3; then git show --color=always stash@{$1}^3; fi; ) | LESS=FRX less -r; fi; }; f"
 
-	pr = "!f() { set -e; pr=$1; shift; git push origin HEAD:refs/heads/pr/$pr \"$@\"; }; f"
+	pr = "!f() { set -e; pr=$1; shift; remote=$(git default -f); git push $remote HEAD:refs/heads/pr/$pr \"$@\"; }; f"
 	prb = "!f() { set -e; pr=$(git rev-parse --abbrev-ref HEAD); git pr $pr \"$@\"; }; f"
-	prd = "!f() { : git branch ; set -e; while [ $# -ne 0 ]; do b=$1; shift; git branch -D $b || :; git push origin :pr/$b || :; done;}; f"
+	prd = "!f() { : git branch ; set -e; remote=$(git default -f); while [ $# -ne 0 ]; do b=$1; shift; git branch -D $b || :; git push $remote :pr/$b || :; done;}; f"
 
 	restamp = "! git commit --amend --no-edit --date=\"$(date -R)\""
 
-	odiff = diff origin/master
-	udiff = diff upstream/master
 	subu = submodule update --init
 	autosquash = -c core.editor=true rebase -i --autosquash
 	# from https://github.com/cgwalters/homegit/blob/master/dotfiles/gitconfig
@@ -79,6 +73,8 @@
 	willadd = add -N
 [pull]
 	rebase = true
+[fetch]
+	prune = true
 [push]
 	default = simple
 	autoSetupRemote = true
@@ -130,3 +126,6 @@
 	defaultBranch = main
 [advice]
 	skippedCherryPicks = false
+[safe]
+	directory = *
+	directory = *

@@ -19,7 +19,7 @@ fi
 
 if [ $# -eq 0 ]; then
 	modified_files=$(git status --ignore-submodules --porcelain | \
-	                 grep -E '^ *[AM] ' | \
+	                 grep -E -e '^ [AM] ' -e '^UU' | \
 	                 awk '{ print $2 }')
 	files="$modified_files"
 	if [ $untracked == 1 ]; then

@@ -1,5 +1,5 @@
 # Expand dir env vars on tab
-shopt -s direxpand
+# shopt -s direxpand
 
 # Controls the format of the time in output of `history`
 HISTTIMEFORMAT="[%F %T] "
@@ -32,14 +32,6 @@ export EDITOR=hx
 export VISUAL=hx
 
 alias findx='sudo find / -mount -iname'
-
-alias t='tmux'
-alias ta='tmux attach'
-
-alias g='rgi'
-
-alias domlist='virsh list --all'
-alias domstart='virsh start'
 
 function bell {
 	local rc=$?
@@ -322,11 +314,13 @@ function register_cmd_start_time() {
     __last_cmd_start_time=$(sed 's/\.\([0-9]\{3\}\).*/\1/' <<< "$EPOCHREALTIME")
 }
 
+# disabled because it conflicts with HISTCONTROL=ignorespace:
+# https://github.com/rcaloras/bash-preexec/issues/115
 # https://github.com/rcaloras/bash-preexec
-if [[ -f ~/.bash-preexec.sh ]]; then
-    source ~/.bash-preexec.sh
-    preexec_functions+=(register_cmd_start_time)
-fi
+# if [[ -f ~/.bash-preexec.sh ]]; then
+#     source ~/.bash-preexec.sh
+#     preexec_functions+=(register_cmd_start_time)
+# fi
 
 # Same thing as prompt_callback, but print the root only.
 # This is better than git rev-parse --show-toplevel because

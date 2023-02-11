@@ -1,0 +1,47 @@
+#!/bin/bash
+set -euo pipefail
+
+cd ~/Code
+
+if [ "${1:-}" = scan ]; then
+    if [ ! -e "${CACHEFILE}" ]; then
+        find * -type d -exec test -d {}/.git \; -print -prune | while read -r line; do
+            echo "handling $line" >&2
+            age=$(git -C "${line}" branch -l --format '%(objectname)' | \
+                    xargs -r -n 1 git -C "${line}" log -1 --pretty=format:'%cd%n' --date=unix | \
+                    sort -g | tail -1)
+            agehuman=$(date --date "@${age:-0}")
+            echo -e "${age:-0}\t$agehuman\t$line"
+            # nremotes=$(git -C "${line}" remote | wc -l)
+            # nbranches=$(git -C "${line}" branch -l | wc -l)
+            # echo "$nremotes.$nbranches $line"
+        done | sort -g > $CACHEFILE
+    else
+        mv $CACHEFILE $CACHEFILE.old
+        cat $CACHEFILE.old | while read -r line; do
+            d=$(echo "$line" | cut -f3 -d'	')
+            [ ! -e "$d" ] || echo "$line"
+        done > $CACHEFILE
+        rm $CACHEFILE.old
+    fi
+    cat $CACHEFILE
+elif [ "${1:-}" = preview ]; then
+    cd "$2"
+    git remote -v
+    echo
+    echo '--------------------------------------------------------------------------------'
+    echo
+    git status
+    echo
+    echo '--------------------------------------------------------------------------------'
+    echo
+    git bstatus
+else
+    export CACHEFILE=/run/user/$UID/$$.codebase-pruner
+    trap "rm -f $CACHEFILE" exit
+    export FZF_DEFAULT_COMMAND="$0 scan"
+    fzf -m --sort --preview "$0 preview {3}" -d '\t' --with-nth 2,3 \
+      --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
+      --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
+      --bind "ctrl-r:execute(rm -rf {+3})+reload-sync($0 scan)"
+fi

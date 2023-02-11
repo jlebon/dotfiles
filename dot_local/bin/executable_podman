@@ -4,9 +4,9 @@ set -euo pipefail
 HOST_SPAWN=
 
 if [ -z "${DISABLE_PODMAN_WRAPPER:-}" ] && \
-        { [ -f /.dockerenv ] || [ -f /run/.containerenv ]; } && \
-        command -v host-spawn >/dev/null; then
-    HOST_SPAWN=host-spawn
+                { [ -f /.dockerenv ] || [ -f /run/.containerenv ]; } && \
+                command -v host-spawn >/dev/null; then
+        HOST_SPAWN="host-spawn -env CONTAINER_HOST,CONTAINER_SSHKEY"
 fi
 
 exec $HOST_SPAWN /usr/bin/podman "$@"

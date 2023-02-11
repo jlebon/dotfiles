@@ -31,6 +31,7 @@ networkdev=e1000
 pxeimagepath=/usr/share/syslinux
 
 # create http server
+# XXX: use tftp instead provided by QEMU (see coreos-installer's tests/images/customize.sh)
 port=$((1024 + RANDOM % 65535))
 setpriv --pdeathsig SIGKILL -- env -C "${tftpdir}" kola http-server --port "${port}" >/dev/null &
 # setpriv --pdeathsig SIGKILL -- kola http-server --port "${port}" >/dev/null &

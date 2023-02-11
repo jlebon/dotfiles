@@ -13,20 +13,20 @@ fi
 echo -n "Waiting for open SSH port..."
 while true; do
 
-	out=$(echo | nc -w 1 $1 22 2>&1 || :)
+	out=$(echo | nc -v -w 1 $1 22 2>&1 || :)
 	if grep -q SSH <<< "$out"; then
 		break
 	fi
 
 	echo -n '.'
 
-	if [[ $out == "Ncat: Connection timed out." ]]; then
+	if [[ $out == *"Connection timed out"* ]]; then
 		continue
 	fi
 
-	if [[ $out == "Ncat: Connection refused." ]] || \
-	   [[ $out == "Ncat: No route to host." ]] || \
-	   [[ $out == "Ncat: Connection reset by peer." ]]; then
+	if [[ $out == *"Connection refused"* ]] || \
+	   [[ $out == *"No route to host"* ]] || \
+	   [[ $out == *"Connection reset by peer"* ]]; then
 		sleep 1
 		continue
 	fi

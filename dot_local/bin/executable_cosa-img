@@ -18,5 +18,6 @@ CODE=$(realpath ~/Code)
 $HOST podman run --rm -ti --security-opt label=disable --privileged \
     --uidmap=1000:0:1 --uidmap=0:1:1000 --uidmap 1001:1001:64536 \
     --device /dev/kvm --device /dev/fuse --tmpfs /tmp -e FORCE_UNPRIVILEGED \
+    -v /etc/pki/ca-trust:/etc/pki/ca-trust:ro \
     -v "${CODE}":"${CODE}" -v "${PWD}":/srv -v /var/tmp:/var/tmp \
     "${COSA_IMG}" "$@"

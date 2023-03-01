@@ -6,7 +6,7 @@ set -euo pipefail
 # into a shell.
 
 install_specs=()
-for cmd in git passwd tmux vim; do
+for cmd in git passwd tmux; do
     if ! command -v "${cmd}" &>/dev/null; then
         install_specs+=("/usr/bin/${cmd}")
     fi

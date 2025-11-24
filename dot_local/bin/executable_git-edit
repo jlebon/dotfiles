@@ -51,10 +51,12 @@ fi
 
 cd $(git rev-parse --show-toplevel)
 
-canonfiles=
-for file in $files; do
-	canonfiles="$canonfiles $(readlink -f $file)"
-done
+# canonfiles=
+# for file in $files; do
+# 	if [ -f "$file" ]; then
+# 		canonfiles="$canonfiles $(readlink -f $file)"
+# 	fi
+# done
 
 cd -
 
@@ -67,4 +69,5 @@ if [ -z "${EDITOR}" ]; then
 fi
 
 
-$EDITOR $canonfiles
+# $EDITOR $canonfiles
+$EDITOR $files

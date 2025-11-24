@@ -5,8 +5,9 @@ HOST_SPAWN=
 
 if [ -z "${DISABLE_PODMAN_WRAPPER:-}" ] && \
                 { [ -f /.dockerenv ] || [ -f /run/.containerenv ]; } && \
-                command -v host-spawn >/dev/null; then
-        HOST_SPAWN="host-spawn -env CONTAINER_HOST,CONTAINER_SSHKEY"
+                command -v host-spawn </dev/null >/dev/null; then
+        echo -e "\033[1;31m> Redirecting to host podman\033[0m" >&2
+        HOST_SPAWN="host-spawn -no-pty -env CONTAINER_HOST,CONTAINER_SSHKEY,REGISTRY_AUTH_FILE,${HOST_SPAWN_ENV:-}"
 fi
 
 exec $HOST_SPAWN /usr/bin/podman "$@"

@@ -1,9 +1,15 @@
 #!/bin/bash
-set -euo pipefail
+set -xeuo pipefail
 
-if [ ! -d "builds" ]; then
-  echo "No builds/ dir found; must run from a cosa dir." >&2
-  exit 1
+# if [ ! -d "builds" ]; then
+#   echo "No builds/ dir found; must run from a cosa dir." >&2
+#   exit 1
+# fi
+
+buildid=latest
+if [ -n "${1:-}" ]; then
+  buildid=$1
+  shift
 fi
 
 tmpd=$(mktemp -d)
@@ -12,16 +18,17 @@ trap 'rm -rf ${tmpd}' EXIT
 tftpdir="${tmpd}/tftp"
 mkdir "${tftpdir}"
 
-kernel=$(ls builds/latest/x86_64/*-live-kernel-x86_64)
-initrd=$(ls builds/latest/x86_64/*-live-initramfs.x86_64.img)
-rootfs=$(ls builds/latest/x86_64/*-live-rootfs.x86_64.img)
-metal=$(ls builds/latest/x86_64/*-metal.x86_64.raw)
+kernel=${KERNEL:-$(ls builds/"${buildid}"/x86_64/*-live-kernel-x86_64)}
+initrd=${INITRD:-$(ls builds/"${buildid}"/x86_64/*-live-initramfs.x86_64.img)}
+rootfs=${ROOTFS:-$(ls builds/"${buildid}"/x86_64/*-live-rootfs.x86_64.img)}
+# metal=$(ls builds/"${buildid}"/x86_64/*-metal.x86_64.raw)
 
-for f in "${kernel}" "${initrd}" "${rootfs}" "${metal}"; do
+# for f in "${kernel}" "${initrd}" "${rootfs}" "${metal}"; do
+for f in "${kernel}" "${initrd}" "${rootfs}"; do
   ln -s "$(realpath "${f}")" "${tftpdir}"
 done
 
-live_ign="/var/home/jlebon/Documents/igncfgs/config-autologin.ign"
+live_ign=${LIVE_IGNITION:-"/var/home/jlebon/Documents/igncfgs/config-autologin.ign"}
 ln -s "${live_ign}" "${tftpdir}/pxe-live.ign" 
 
 # optionally append rootfs
@@ -33,8 +40,8 @@ pxeimagepath=/usr/share/syslinux
 # create http server
 # XXX: use tftp instead provided by QEMU (see coreos-installer's tests/images/customize.sh)
 port=$((1024 + RANDOM % 65535))
-setpriv --pdeathsig SIGKILL -- env -C "${tftpdir}" kola http-server --port "${port}" >/dev/null &
-# setpriv --pdeathsig SIGKILL -- kola http-server --port "${port}" >/dev/null &
+# setpriv --pdeathsig SIGKILL -- env -C "${tftpdir}" kola http-server --port "${port}" >/dev/null &
+setpriv --pdeathsig SIGKILL -- env -C "${tftpdir}" python -m http.server "${port}" &
 
 baseurl="http://${tftpipaddr}:${port}"
 
@@ -60,6 +67,6 @@ for pxeimg in pxelinux.0 ldlinux.c32; do
 done
 bootfile="/pxelinux.0"
 
-qemu-system-x86_64 -machine accel=kvm -cpu host -m 4G -smp 2 -nographic \
+qemu-system-x86_64 -machine accel=kvm -cpu host -m "${QEMU_MEMORY:-4G}" -smp ${CPUS:-2} -nographic \
   -device "${networkdev},netdev=eth0" -boot once=n \
   -netdev "user,id=eth0,tftp=${tftpdir},bootfile=${bootfile}" "$@"

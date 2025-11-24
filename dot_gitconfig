@@ -1,42 +1,33 @@
-[color]
-	ui = true
-	# We use always here instead of auto because otherwise
-	# we don't get any coloring with Ggrep in vim.
-	# DISABLED: breaks `git jump grep`
-	#grep = always
-[color "grep"]
-	linenumber = green
-	match = red bold
-	filename = magenta
 [merge]
 	conflictstyle=zdiff3
 [user]
 	name = Jonathan Lebon
 	email = jonathan@jlebon.com
-	signingkey = 519CE313
 [alias]
+	# if we're in a git repo already, make sure to cd into the subdir first (aliases
+	# always run from the root of the repo)
+	initadd = "!set -e; f() { cd ${GIT_PREFIX:-.}; git init .; git add -A; git commit -m 'initial commit'; }; f"
 	lsb = "!f() { : git branch; git bstatus \"$@\"; }; f"
 	format-one-patch = "!f() { : git format-patch; git format-patch ${1}^..${1} \"$@\"; }; f"
 	d = diff
 	wip = commit -am "wip"
 	scrap = reset --hard HEAD
-	uncommit = reset HEAD^
 	rob = reset HEAD^
 	nuke = reset --hard HEAD^
-	last = log -1 HEAD
 	ck = checkout
 	amend = commit --amend
 	amendpipe = -c core.commentchar=| commit --amend
 	amendit = commit --amend --no-edit
 	fix = commit --amend --no-edit -a
 	fixup = "!f() { : git commit; git commit -a --fixup ${1:-HEAD}; }; f"
-	cm = "!git checkout $(git default)"
-	rlog = ! sh -c 'git log --reverse --ancestry-path $1^..HEAD' - 2>/dev/null
-	clip = "!f() { : git log; git log -1 --format=%B ${1:-HEAD} | xsel -ib; }; f"
-	rei = rebase -i
+	cm = "!set -e; git checkout $(git default)"
+	clip = "!f() { : git log; git log -1 --format=%B ${1:-HEAD} | wl-copy; }; f"
+	clipout = "!f() { : git log; git log -1 --format=%B ${1:-HEAD}; }; f"
+	mfetch = "!set -e; r=$(git default -u); b=$(git default); git fetch $r $b:$b"
+	rem = "!set -e; r=$(git default -u); b=$(git default); git rebase $b -i \"$@\""
+	frem = "!set -e; git mfetch; git rem \"$@\""
 	rec = "!f() { git up && git rebase --continue; }; f"
 	rea = rebase --abort
-	rem = "!git rebase -i $(git default)"
 	cp = cherry-pick
 	cpc = cherry-pick --continue
 	cpa = cherry-pick --abort
@@ -44,33 +35,53 @@
 	l = log --pretty=oneline
 	la = log --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lg = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
-	lc = log --pretty=format:'%Cred%ad %Cblue%an %C(yellow)%h %Creset(\"%s\")' --date=short
 	# I use this from hx's `pipe` command.
 	quote = "!f() { : git log; xargs git log -n 1 --pretty=format:'%h (\"%s\")'; }; f"
 	lgi = "!f() { : git log; git log-interactive \"$@\"; }; f"
 	lai = "!f() { : git log; NO_GRAPH=1 git log-interactive \"$@\"; }; f"
-	h = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 10
-	hh = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short -n 20
 	up = add -u
 	bi = branch-interactive
 
 	# same as git stash show, except you can just give the stash index number
 	# defaults to git stash list if no index number given
 	# also shows untracked stashed files (if any), which are kept in the third parent of the commit
-	stashow = "!f() { set -e; if [ $# -eq 0 ]; then git stash list; else ( git show --color=always stash@{$1}; if git rev-parse --verify --quiet stash@{$1}^3; then git show --color=always stash@{$1}^3; fi; ) | LESS=FRX less -r; fi; }; f"
+	stashow = "!f() { set -e; if [ $# -eq 0 ]; then git stash list; else ( git show --color=always stash@{$1}; if git rev-parse --verify --quiet stash@{$1}^3; then git ow --color=always stash@{$1}^3; fi; ) | LESS=FRX less -r; fi; }; f"
 
-	pr = "!f() { set -e; pr=$1; shift; remote=$(git default -f); git push $remote HEAD:refs/heads/pr/$pr \"$@\"; }; f"
-	prb = "!f() { set -e; pr=$(git rev-parse --abbrev-ref HEAD); git pr $pr \"$@\"; }; f"
 	prd = "!f() { : git branch ; set -e; remote=$(git default -f); while [ $# -ne 0 ]; do b=$1; shift; git branch -D $b || :; git push $remote :pr/$b || :; done;}; f"
+	pr = "!f() { : git push ; set -e; remote=$(git default -f); pr=$(git rev-parse --abbrev-ref ${BRANCH:-HEAD}); git push \"$@\" $remote ${BRANCH:-HEAD}:refs/heads/pr/$pr; }; f"
+	prx = "!f() { : git branch ; \
+		set -e; \
+		branches=(); \
+		for arg in \"$@\"; do \
+			if [[ $arg = -* ]]; then \
+				[ $arg != -- ] || shift; \
+				break; \
+			fi; \
+			branches+=($arg); \
+		done; \
+		shift ${#branches[@]}; \
+		for branch in \"${branches[@]}\"; do \
+			BRANCH=$branch git pr \"$@\"; done; \
+		}; f"
 
 	restamp = "! git commit --amend --no-edit --date=\"$(date -R)\""
 
-	subu = submodule update --init
+	subu = submodule update --init --recursive
 	autosquash = -c core.editor=true rebase -i --autosquash
-	# from https://github.com/cgwalters/homegit/blob/master/dotfiles/gitconfig
-	rclean = !git clean -dfX && git submodule foreach git clean -dfX
-	rxclean = !git clean -dfx && git submodule foreach git clean -dfx
+	# adapted from https://github.com/cgwalters/homegit/blob/master/dotfiles/gitconfig
+	rclean = !git clean -dffX && git submodule foreach git clean -dffX
+	rxclean = !git clean -dffx && git submodule foreach git clean -dffx
 	willadd = add -N
+	wa = worktree add
+	wl = worktree list
+	wp = worktree prune
+	wn = "!f() { rm -rf worktrees; git worktree prune; }; f"
+	wr = worktree remove
+
+	# Difftastic aliases, so `git dlog` is `git log` with difftastic and so on.
+	# dlog = -c diff.external=difft log --ext-diff
+	# dshow = -c diff.external=difft show --ext-diff
+	# ddiff = -c diff.external=difft diff
 [pull]
 	rebase = true
 [fetch]
@@ -79,41 +90,25 @@
 	default = simple
 	autoSetupRemote = true
 [diff]
+    # external = difft
 	algorithm = histogram
 	renames = copies
 	indentHeuristic = true
 	compactionHeuristic = true
-	renameLimit = 791
-	tool = difftastic
-[difftool]
-	prompt = false
-[difftool "difftastic"]
-	cmd = difft "$LOCAL" "$REMOTE"
-# Use a pager for large output, just like other git commands.
-[pager]
-	difftool = true
-# `git dft` is less to type than `git difftool`.
-[alias]
-	dft = difftool
 [include]
 	path = .gitconfig.local
 [commit]
 	verbose = true
-#[interactive]
-#	diffFilter = diff-highlight
 [core]
 	pager = delta
 	# commentchar = |
 [interactive]
 	diffFilter = delta --color-only
-[add.interactive]
-	useBuiltin = false # required for git 2.37.0
 [delta]
+	light = true
 	navigate = true # use n and N to move between diff sections
-	light = true    # set to true if you're in a terminal w/ a light background color (e.g. the default macOS terminal)
 	file-decoration-style = blue box bold
 	hunk-header-decoration-style = hidden
-	#width = variable
 	hunk-header-line-number-style = red bold
 	hunk-header-style = line-number syntax bold ul
 [rebase]
@@ -126,6 +121,16 @@
 	defaultBranch = main
 [advice]
 	skippedCherryPicks = false
+[rerere]
+	enabled = true
+[branch]
+	sort = -committerdate
+# signing related
+[user]
+	signingKey = /var/home/jlebon/.ssh/id_rsa.flux.pub
+[commit]
+	gpgsign = true
+[gpg]
+	format = ssh
 [safe]
-	directory = *
 	directory = *

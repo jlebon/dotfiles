@@ -44,7 +44,22 @@ permalink() {
     if [[ $base == *pagure* ]] || [[ $base == *fedoraproject.org* ]]; then
         file="f/${file}"
     fi
-    echo "https://${base}/${repo}/blob/${rev}/${file}${lineno:+#L${lineno}}"
+
+    blob="blob/${rev}"
+    if [[ $base == git.kernel.org ]]; then
+        blob=tree
+        file="${file}?id=${rev}"
+    fi
+
+    if [ -n "$lineno" ]; then
+        if [[ $base == git.kernel.org ]]; then
+            lineno="#n${lineno}"
+        else
+            lineno="#L${lineno}"
+        fi
+    fi
+
+    echo "https://${base}/${repo}/${blob}/${file}${lineno}"
 }
 
 commitlink() {
@@ -59,6 +74,9 @@ commitlink() {
     if [[ $base == *pagure* ]] || [[ $base == *fedoraproject.org* ]]; then
         rev="c/${rev}"
     elif [[ $base == git.kernel.org ]]; then
+        rev="commit/?id=${rev}"
+    elif [[ $base == pkgs.devel.redhat.com ]]; then
+        base="${base}/cgit"
         rev="commit/?id=${rev}"
     else
         rev="commit/${rev}"
@@ -124,6 +142,10 @@ parse_base() {
     elif [[ $url == git@*:* ]]; then
         local base=${url#git@}
         base=${base%:*}
+        case "$base" in
+            gitlab-rh) base=gitlab.com;;
+            *);;
+        esac
     elif [[ $url == https://*/* ]]; then
         local base=${url#https://}
         base=${base%%/*}
@@ -132,6 +154,7 @@ parse_base() {
         exit 1
     fi
 
+    echo "${base}" >&2
     echo "${base}"
 }
 

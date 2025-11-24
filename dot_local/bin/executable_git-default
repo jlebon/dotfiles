@@ -1,0 +1,123 @@
+#!/usr/bin/python3
+
+'''
+Get various "defaults" configuration for a git repo (e.g. default branch,
+default remote).
+'''
+
+import argparse
+import getpass
+import os
+import subprocess
+import sys
+
+
+def main():
+    args = parse_args()
+    ensure_git_toplevel()
+    (upstream, fork) = get_remotes()
+    if args.upstream_remote:
+        print(upstream)
+        return
+    if args.fork_remote:
+        if fork == '':
+            fatal("could not determine fork remote")
+        print(fork)
+        return
+    upstream_ref = get_default_branch_for_remote(upstream)
+    if args.upstream_ref:
+        print(upstream_ref)
+        return
+    print(get_default_local_branch(upstream_ref))
+
+
+def ensure_git_toplevel():
+    try:
+        dir = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'],
+                                      stderr=subprocess.PIPE, encoding='utf-8')
+    except Exception:
+        fatal("not inside a git repository")
+    os.chdir(dir.strip())
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog="git default")
+    parser.add_argument('-l', '--local-ref', action='store_true',
+                        help="Print default local ref")
+    parser.add_argument('-r', '--upstream-ref', action='store_true',
+                        help="Print default remote ref")
+    parser.add_argument('-u', '--upstream-remote', action='store_true',
+                        help="Print default upstream remote")
+    parser.add_argument('-f', '--fork-remote', action='store_true',
+                        help="Print default fork remote")
+    return parser.parse_args()
+
+
+def get_remotes():
+    remotes = subprocess.check_output(['git', 'remote'], encoding='utf-8')
+
+    # convert to a set
+    remotes = set(remotes.splitlines())
+
+    # get the trivial cases out of the way
+    if len(remotes) == 0:
+        fatal("no remotes found")
+    if len(remotes) == 1:
+        return (remotes.pop(), '')
+
+    # ignore upstream-PUSH remotes
+    remotes -= set(['upstream-PUSH'])
+
+    user = getpass.getuser()
+    if user not in remotes and 'upstream' in remotes and 'origin' in remotes:
+        return ('upstream', 'origin')
+
+    if remotes == set(['origin', user]):
+        return ('origin', user)
+
+    fatal("cannot determine upstream and fork remotes")
+
+
+def get_default_branch_for_remote(remote):
+    if not branch_is_symref(f'{remote}/HEAD'):
+        subprocess.check_output(['git', 'fetch', remote])
+        subprocess.check_output(['git', 'remote', 'set-head', remote, '-a'])
+    ref = subprocess.check_output(['git', 'symbolic-ref',
+                                   f'refs/remotes/{remote}/HEAD'],
+                                  encoding='utf-8').strip()
+    assert ref.startswith('refs/remotes/')
+    return ref.removeprefix('refs/remotes/')
+
+
+def branch_is_symref(branch):
+    try:
+        subprocess.check_output(['git', 'symbolic-ref', '-q',
+                                 f'refs/remotes/{branch}'])
+        return True
+    except subprocess.CalledProcessError as e:
+        if e.returncode == 1:
+            return False
+        raise e
+
+
+def get_default_local_branch(upstream_ref):
+    FORMAT = '%(refname:lstrip=2) %(upstream:lstrip=2)'
+    lines = subprocess.check_output(['git', 'branch', '--sort=committerdate',
+                                     f'--format={FORMAT}'], encoding='utf-8')
+    lines = lines.splitlines()
+    for line in lines:
+        branches = line.split()
+        if len(branches) == 2 and branches[1] == upstream_ref:
+            return branches[0]
+
+    fatal(f"no local branch found tracking {upstream_ref}")
+
+
+def fatal(*args):
+    print("fatal:", *args, file=sys.stderr)
+    sys.stderr.flush()
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

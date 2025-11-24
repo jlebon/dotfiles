@@ -11,17 +11,27 @@ job=$1; shift
 buildnum=$1; shift
 
 jenkins_uid=$(oc get sa jenkins -o jsonpath="{.metadata.uid}")
-token_data=$(oc get secrets -o json | jq -r "[.items[] | select(
+token_data=${TOKEN:-$(oc get secrets -o json | jq -r "[.items[] | select(
     .type == \"kubernetes.io/service-account-token\" and
     .metadata.annotations[\"kubernetes.io/service-account.name\"] == \"jenkins\" and
     .metadata.annotations[\"kubernetes.io/service-account.uid\"] == \"${jenkins_uid}\"
-)] | .[0].data.token" | base64 -d)
+)] | .[0].data.token" | base64 -d)}
 jenkins_url=$(oc get route jenkins -o jsonpath="{.spec.host}")
-api_url="https://${jenkins_url}/job/${job}/${buildnum}/api/json"
+
+bo_pre=$job
+bo_post=$job
+api_job=$job
+if [[ $job == */* ]]; then
+    bo_pre=${job%/*}
+    bo_post=${job#*/}
+    api_job=$bo_pre/job/$bo_post
+fi
+
+api_url="https://${jenkins_url}/job/${api_job}/${buildnum}/api/json"
 
 # for convenience
-echo "Console:   https://${jenkins_url}/job/${job}/${buildnum}/console"
-echo "BlueOcean: https://${jenkins_url}/blue/organizations/jenkins/${job}/detail/build/${buildnum}/pipeline"
+echo "Console:   https://${jenkins_url}/job/${api_job}/${buildnum}/console"
+echo "BlueOcean: https://${jenkins_url}/blue/organizations/jenkins/${bo_pre}/detail/${bo_post}/${buildnum}/pipeline"
 
 prev_description=
 while true; do
@@ -32,8 +42,11 @@ while true; do
         echo "Description: ${description}" >&2
         prev_description=$description
     fi
+    building=$(jq -r .building <<< "$state")
+    if [ "${building}" = true ] || [ "${result}" = null ]; then
+        sleep 5; continue
+    fi
     case "${result}" in
-        null) sleep 5; continue;;
         SUCCESS) echo "Build completed successfully" >&2; exit 0;;
         *) echo "Build did not complete successfully (${result})" >&2; exit 1;;
     esac

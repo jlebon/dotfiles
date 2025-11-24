@@ -12,3 +12,11 @@ podman pull quay.io/jlebon/pet
 echo "Creating pet container"
 toolbox create --image quay.io/jlebon/pet
 toolbox run -c pet true
+
+# Code may try to resolve the default 'toolbox' hostname for real, which makes
+# no sense at all. Just force it to be localhost. Ideally, toolbox would allow
+# overriding this.
+# Hit this in cosa where the flock code wants to resolve hostnames in the
+# process of trying to make NFS-safe locks... Should fix that.
+toolbox run -c pet sudo bash -c 'echo localhost > /etc/hostname'
+toolbox run -c pet sudo hostname localhost

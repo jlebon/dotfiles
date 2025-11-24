@@ -1,9 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+## XXX: should use fzf --raw mode
+
 ## Navigation:
 ## 
 ## Select up/down                   Ctrl-K, Ctrl-J
+## Scroll up/down one line          Ctrl-Y, Ctrl-E
 ## Scroll commits up/down           Ctrl-U, Ctrl-D
 ## Scroll preview up/down           Alt-U, Alt-D
 ## Scroll preview up/down one line  Alt-Y, Alt-E
@@ -30,6 +33,7 @@ set -euo pipefail
 ## Toggle preview                         Ctrl-/
 ## Edit files in commit                   Ctrl-H
 ## Copy commit hashes to tmux and stdout  Ctrl-G
+## Pull                                   Ctrl-T
 
 # Based on https://github.com/junegunn/fzf.vim/issues/211#issuecomment-497943378.
 # Some explanations:
@@ -62,12 +66,13 @@ if [ -n "${TMUX:-}" ]; then
     tmux=tmux
 fi
 
-## --header 'View: Enter | Reload: C-S | Edit files: C-H | Edit commit: C-R | Help: F1' \
+# --header 'View: Enter | Reload: C-S | Edit files: C-H | Edit commit: C-R | Help: F1' \
 
 # shellcheck disable=SC2016
 fzf --track --ansi --no-sort --reverse --tiebreak=index -m -d '\x00' --nth 4,6  \
   --preview '[ -z {2} ] || git show --color=always {2} | delta' \
   --bind 'f2:change-preview-window(down|right)' \
+  --bind 'ctrl-y:offset-up,ctrl-e:offset-down' \
   --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
   --bind 'enter:execute([ -z {2} ] || git show --color=always {2} | delta | less -R)' \
@@ -76,7 +81,9 @@ fzf --track --ansi --no-sort --reverse --tiebreak=index -m -d '\x00' --nth 4,6  
   --bind 'ctrl-h:execute([ -z {2} ] || git edit {2})' \
   --bind 'ctrl-r:execute([ -z {2} ] || git reword {2})' \
   --bind "ctrl-r:+reload:${FZF_DEFAULT_COMMAND}" \
-  --bind 'ctrl-b:execute([ -z {2} ] || git rebase -i {2})' \
+  --bind 'ctrl-t:execute([ -z {2} ] || git pull)' \
+  --bind "ctrl-t:+reload:${FZF_DEFAULT_COMMAND}" \
+  --bind 'ctrl-b:execute:([ -z {2} ] || git rebase -i {2})' \
   --bind "ctrl-b:+reload:${FZF_DEFAULT_COMMAND}" \
   --bind 'ctrl-x:execute([ -z {2} ] || git nuke)' \
   --bind "ctrl-x:+reload:${FZF_DEFAULT_COMMAND}" \

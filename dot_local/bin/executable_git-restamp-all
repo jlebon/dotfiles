@@ -7,35 +7,37 @@ set -euo pipefail
 # we reuse the rebase machinery so that users are familiar with the semantics
 # and how to --abort the operation if something goes wrong
 
-if [ $# -eq 1 ]; then
+if [ $# -eq 0 ]; then
     in_rebase=0
-elif [ $# -eq 2 ] && [ $1 == _rebase_ ]; then
+    rev_target=$(git default)
+elif [ $# -eq 1 ]; then
+    in_rebase=0
+    rev_target=$1; shift
+elif [ $# -eq 2 ] && [ "$1" = _rebase_ ]; then
     in_rebase=1
 else
     echo "Usage: $0 <REVISION>"
     exit 0
 fi
 
-self=$0
-
-if [ $in_rebase == 0 ]; then
+if [ $in_rebase = 0 ]; then
 
     # do this at the user-facing level
 
-    rev_target=$1
-    rev_target=$(git rev-parse $rev_target)
+    rev_target=$(git rev-parse "$rev_target")
 
     # remember what the original editor was set to so that we can restore it for
     # the reword operation
-    export GIT_EDITOR_ORIG=$(git var GIT_EDITOR)
+    GIT_EDITOR_ORIG=$(git var GIT_EDITOR)
+    export GIT_EDITOR_ORIG
     editor="$0 _rebase_"
 
-    git -c core.editor="$editor" rebase -q -i $rev_target
+    git -c core.editor="$editor" rebase -q -i "$rev_target"
 else
 
     # do this in the rebase
 
     rebase_file=$2
 
-    sed -i "/^pick / a exec git restamp && sleep 1" $rebase_file
+    sed -i "/^pick / a exec git restamp && sleep 1" "$rebase_file"
 fi

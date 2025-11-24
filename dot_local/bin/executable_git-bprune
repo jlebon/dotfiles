@@ -9,7 +9,22 @@ import sys
 LOGSET_FORMAT_ARG = '--format=%at %an %ae %s'
 
 # XXX: do actual commit diff checking?
+#        using git cherry $upstream $branch
+#        if we do that instead of the logset stuff, we'll need to look at
+#          actually merged commits
 # XXX: use `git default`
+
+'''
+    - how to deal with backport branches? if we just compare against the default
+      branch, `git cherry` will say that's fully merged.
+        - 1. ignore
+            - runs the risk of deleting a local branch and still open backport PR
+        - 2. calculate forked off branch
+            - for each branch, calculate which of the target branches it split
+              from
+                - do a merge-base against each target branch
+                - pick target branch wi
+'''
 
 
 def main():
@@ -17,23 +32,25 @@ def main():
     args = parse_args()
     ensure_git_toplevel()
     upstream, origin = get_remotes()
-    main_branch = get_default_branch_for_remote(upstream)
-    logset = build_logset(main_branch, upstream, args.extend)
+    main_branches = get_main_branches(upstream, args.extend)
 
     # local branches
     if args.local or not args.remote:
         if args.force:
             git_worktree_prune()
-        local_branches = get_local_branches(main_branch)
-        local_branches = get_merged_branches(logset, local_branches)
-        delete_local_branches(local_branches, args.force, args.name_only)
+        local_branches = get_local_branches(main_branches)
+        # XXX, [0] is not correct
+        local_branches = get_merged_branches(list(main_branches)[0], local_branches)
+        print(local_branches)
+        #delete_local_branches(local_branches, args.force, args.name_only)
 
     # remote branches
     if origin and (args.remote or not args.local):
         if args.force:
             git_fetch_prune(origin)
         remote_branches = get_remote_branches(origin)
-        remote_branches = get_merged_branches(logset, remote_branches)
+        # XXX, [0] is not correct
+        remote_branches = get_merged_branches(list(main_branches)[0], remote_branches)
         delete_remote_branches(origin, remote_branches, args.force,
                                args.name_only)
 
@@ -79,7 +96,7 @@ def get_remotes():
     remotes -= set(['upstream-PUSH'])
 
     if remotes == set(['upstream', 'origin']):
-        return ('origin', 'origin')
+        return ('upstream', 'origin')
 
     user = getpass.getuser()
     if remotes == set(['origin', user]):
@@ -118,6 +135,22 @@ def build_logset(branch, remote, extra_patterns):
         resolved_extra_branches.add(f'^{branch}')
         update_logset_for_refs(logset, resolved_extra_branches)
     return logset
+
+
+def get_main_branches(remote, extra_patterns):
+    main_branches = set([get_default_branch_for_remote(remote)])
+    try:
+        cfg = subprocess.check_output(['git', 'config', '--get-all',
+                                       'bprune.extend'],
+                                      encoding='utf-8')
+        extra_patterns.extend(cfg.splitlines())
+    except subprocess.CalledProcessError:
+        pass
+    # support whitespace-separated patterns
+    extra_patterns = sum([p.split() for p in extra_patterns], [])
+    for p in extra_patterns:
+        main_branches.update(get_remote_branches(remote, p))
+    return main_branches
 
 
 def update_logset_for_refs(logset, branches):
@@ -233,15 +266,21 @@ def git_fetch_prune(remote):
     subprocess.check_call(['git', 'fetch', '--prune', remote])
 
 
-def get_merged_branches(logset, branches):
+def get_merged_branches(main_branch, branches):
     merged_branches = []
     for branch in branches:
-        log = subprocess.check_output(['git', 'log', '-1', LOGSET_FORMAT_ARG,
-                                       branch, '--'], encoding='utf-8')
-        log = log.strip()
-        if log in logset:
+        if branch_is_merged(main_branch, branch):
             merged_branches.append(branch)
     return merged_branches
+
+
+def branch_is_merged(upstream, head):
+    lines = subprocess.check_output(['git', 'cherry', upstream, head],
+                                    encoding='utf-8').splitlines()
+    for line in lines:
+        if not line.startswith("-"):
+            return False
+    return True
 
 
 def fatal(*args):

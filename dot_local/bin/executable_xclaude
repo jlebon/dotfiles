@@ -1,0 +1,72 @@
+#!/bin/bash
+set -euo pipefail
+shopt -s inherit_errexit
+
+if [ ! -e "/run/.containerenv" ]; then
+    echo "ERROR: Must be run from pet container" >&2
+    exit 1
+fi
+
+if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ]; then
+    echo "ERROR: not in a git repo; remember we relabel \$PWD!" >&2
+    exit 1
+fi
+
+# Check if there's a newer version of claude-code available
+claude_manifest=~/node_modules/\@anthropic-ai/claude-code/package.json
+current_version=$(jq -r '.version' "${claude_manifest}")
+latest_version=$(curl -s https://registry.npmjs.org/@anthropic-ai/claude-code/latest | jq -r '.version')
+if [ -n "${latest_version}" ] && [ "${current_version}" != "${latest_version}" ]; then
+    echo "Updating @anthropic-ai/claude-code from ${current_version} to ${latest_version}..."
+    npm update @anthropic-ai/claude-code
+fi
+
+cd "$(realpath "${PWD}")"
+
+imageid=$(source /run/.containerenv; echo "${imageid}")
+
+podman_args=(
+    run --rm -ti
+    --hostname claude
+    --env HOME="${HOME}"
+    --tmpfs "${HOME}"
+    -v "${HOME}"/node_modules:"${HOME}"/node_modules:O
+    -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:z
+    -v "${HOME}"/.claude.json:"${HOME}"/.claude.json:z
+    -v "${HOME}"/.claude:"${HOME}"/.claude:z
+    -v "${PWD}":"${PWD}":z
+    -w "${PWD}"
+)
+
+if [ -e .git ]; then
+    if [ -f .git ]; then
+        primary_worktree=$(git worktree list | head -n1 | cut -f1 -d' ')
+        podman_args+=(-v "${primary_worktree}:${primary_worktree}:ro")
+    fi
+    podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:ro)
+fi
+
+# claude env vars
+# shellcheck disable=SC1090
+source ~/Temp/claude-env-work.sh
+podman_args+=(
+    --env CLAUDE_CODE_USE_VERTEX
+    --env CLOUD_ML_REGION
+    --env ANTHROPIC_VERTEX_PROJECT_ID
+    --env DISABLE_AUTOUPDATER=1
+)
+export HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
+
+# claude doesn't like running as root with --dangerously-skip-permissions
+# (there's IS_SANDBOX=1, but then you have to approve a bypass prompt)
+podman_args+=(--userns=keep-id)
+
+# and the actual image
+podman_args+=(
+    "${imageid}"
+    npm exec claude
+    --
+    --dangerously-skip-permissions
+)
+
+exec podman "${podman_args[@]}" "$@"

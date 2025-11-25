@@ -34,6 +34,7 @@ function cdw() {
         echo "Already in a temporary worktree!" >&2
         return 1
     fi
+    cd "$(realpath "$(git rev-parse --git-common-dir)/..")" || return 1
     if [ -n "${1:-}" ]; then
         branch=${1}
     else

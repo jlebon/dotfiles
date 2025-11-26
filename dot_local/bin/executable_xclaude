@@ -7,6 +7,26 @@ if [ ! -e "/run/.containerenv" ]; then
     exit 1
 fi
 
+# Parse our own arguments
+add_dirs=()
+claude_args=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --add-dir)
+            if [ -z "${2:-}" ]; then
+                echo "ERROR: --add-dir requires a directory argument" >&2
+                exit 1
+            fi
+            add_dirs+=("$(realpath "$2")")
+            shift 2
+            ;;
+        *)
+            claude_args+=("$1")
+            shift
+            ;;
+    esac
+done
+
 if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ]; then
     echo "ERROR: not in a git repo; remember we relabel \$PWD!" >&2
     exit 1
@@ -46,6 +66,12 @@ if [ -e .git ]; then
     podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:ro)
 fi
 
+for dir in "${add_dirs[@]+"${add_dirs[@]}"}"; do
+    container_dir="/dirs/$(basename "${dir}")"
+    podman_args+=(-v "${dir}:${container_dir}:z")
+    claude_args+=(--add-dir "${container_dir}")
+done
+
 # claude env vars
 # shellcheck disable=SC1090
 source ~/Temp/claude-env-work.sh
@@ -69,4 +95,4 @@ podman_args+=(
     --dangerously-skip-permissions
 )
 
-exec podman "${podman_args[@]}" "$@"
+exec podman "${podman_args[@]}" ${claude_args[@]+"${claude_args[@]}"}

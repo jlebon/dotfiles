@@ -2,6 +2,15 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
+# Run claude in an unprivileged container using the same container image in
+# which we're running. The primary use case is a pet container image you've
+# customized with various dev tools, and you want Claude to be able to use those
+# tools as well in --dangerously-skip-permissions mode. Note this runs `podman`;
+# in my case, `podman` is actually ~/.local/bin/podman and just proxies to the
+# real host podman via `host-spawn`. That wrapper is available in my dotfiles
+# repo as well, but one can probably just change the podman call at the bottom
+# to `flatpak-spawn --host`
+
 if [ ! -e "/run/.containerenv" ]; then
     echo "ERROR: Must be run from pet container" >&2
     exit 1

@@ -1,0 +1,61 @@
+#!/usr/bin/python
+
+import argparse
+import json
+import subprocess
+from collections import defaultdict
+
+
+def process_journal_entries_from_json_string(json_string):
+    data = json.loads(json_string)
+
+    entries = data.get('entries', [])
+
+    # Sort entries by date and time in descending order (most recent first)
+    entries.sort(key=lambda x: (x['date'], x['time']), reverse=True)
+
+    # Dictionary to store titles grouped by date
+    grouped_entries = defaultdict(list)
+    # Set to keep track of titles already added to avoid duplicates across days
+    processed_titles = set()
+
+    for entry in entries:
+        title = entry['title']
+        date = entry['date']
+
+        if title not in processed_titles:
+            grouped_entries[date].append(title)
+            processed_titles.add(title)
+
+    # Sort dates in ascending order for printing
+    sorted_dates = sorted(grouped_entries.keys())
+
+    for date in reversed(sorted_dates):
+        print(f"Date: {date}")
+        # reverse back so we go from earlier entries to later during the day
+        for title in reversed(grouped_entries[date]):
+            print(f"  - {title}")
+        print()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Display journal entries grouped by date')
+    parser.add_argument('--from', dest='from_time', default='last week',
+                        help='Time period to retrieve entries from (default: last week)')
+    parser.add_argument('--to', dest='to_time', default='today',
+                        help='Time period to retrieve entries to (default: today)')
+    args = parser.parse_args()
+
+    # Execute the jrnl command and capture its output
+    command = ["jrnl", "-from", args.from_time, "-to", args.to_time, "--format=json"]
+    try:
+        json_output = subprocess.check_output(command, encoding='utf-8')
+        process_journal_entries_from_json_string(json_output)
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing jrnl command: {e}")
+        print(f"Stderr: {e.stderr}")
+    except FileNotFoundError:
+        print("Error: 'jrnl' command not found. Please ensure jrnl is installed and in your PATH.")
+    except json.JSONDecodeError:
+        print("Error: Could not decode JSON output from jrnl.")
+        print(f"Jrnl output: {json_output}")

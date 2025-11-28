@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ -d _kola_temp ]; then
+  exec less +F _kola_temp/qemu-latest/*/*/journal.txt
+elif [ -d tmp/kola ]; then
+  exec less +F tmp/kola/qemu-latest/*/*/journal.txt
+fi
+
+echo 'No kola output directory found!' >&2
+exit 1

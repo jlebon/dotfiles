@@ -1,0 +1,44 @@
+#!/bin/bash
+set -euo pipefail
+
+## Ctrl-U/D:    scroll up/down
+## Alt-E/Y/U/D: scroll preview up/down
+## Enter:       go down directory
+## Ctrl-O:      go up one directory
+## Ctrl-H:      edit files
+## Ctrl-Space:  view selected file
+## Ctrl-/:      toggle preview
+## Ctrl-?:      view help
+
+# Based on https://github.com/junegunn/fzf/issues/1750#issue-521031164.
+# XXX: support regular rg output?
+# Some explanations:
+#  - We use FZF_DEFAULT_COMMAND instead of piping so that the command is owned
+#    and interruptable by fzf.
+#  - We disabled searching if the query string is empty.
+#  - The `|| :` syntax is so fzf doesn't report an error if rg finds nothing.
+#  - We use `execute()` to spawn the editor instead of exiting fzf with the
+#    results so that previewing works (otherwise, stdout isn't a terminal, so
+#    e.g. `less` won't work).
+
+dir=${1:-$(pwd)}; shift || :
+dir=$(realpath "$dir")
+
+cd "${dir}"
+
+export FZF_DEFAULT_COMMAND="find -L . -mindepth 1 \\( -path './.git' -o -path './worktrees/*' -o -path './target' -o -path '*/vendor/*' -o -fstype 'sysfs' -o -fstype 'devfs' -o -fstype 'devtmpfs' -o -fstype 'proc' \\) -prune \
+    -o -type f -print \
+    -o -type d -print \
+    -o -type l -print 2> /dev/null | cut -b3-"
+
+# shellcheck disable=SC2016
+fzf --ansi -m \
+  --preview '[ -d {} ] || bat --plain --color always {}' --prompt "$(basename "${dir}")> "\
+  --bind 'ctrl-o:execute(findi $(realpath ..))+abort' \
+  --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
+  --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
+  --bind 'ctrl-h:execute(hx {+})+abort' \
+  --bind 'enter:execute(findi {})+abort' \
+  --bind 'ctrl-space:execute(bat --color=always {} | less -R)' \
+  --bind 'ctrl-/:toggle-preview' \
+  --bind "f1:execute(grep '^## ' '$0' | cut -f2- -d' ' | less)"

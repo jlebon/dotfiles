@@ -1,0 +1,34 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+DOMAIN=FEDORAPROJECT.ORG
+
+while true; do
+    read -r -p 'Enter password: ' -s PW; echo
+    if [ -f "$HOME/.config/fedkinit-pwdigest" ]; then
+        digest=$(sha256sum <<< "${PW}" | cut -f1 -d' ')
+        if [ "$digest" != "$(cat "$HOME/.config/fedkinit-pwdigest")" ]; then
+            echo 'Incorrect password!' >&2
+            continue
+        fi
+    fi
+    break
+done
+
+if command -v ykman &>/dev/null && [ -n "$(ykman list)" ]; then
+    PIN=$(ykman oath accounts code -s fedora)
+else
+    read -r -p 'Enter PIN: ' -s PIN; echo
+fi
+
+armorcache=$(mktemp)
+trap 'rm -f $armorcache' EXIT
+
+kinit -n @$DOMAIN -c FILE:"$armorcache"
+
+rc=0
+out=$(kinit -T FILE:"$armorcache" "$USER@$DOMAIN" <<< "${PW}${PIN}" 2>&1) || rc=$?
+if [ $rc != 0 ]; then
+    echo "$out" >&2
+    exit $rc
+fi

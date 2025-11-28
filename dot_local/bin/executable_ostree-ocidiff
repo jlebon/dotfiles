@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+
+REPO=/srv/tmpdir/bare-user
+
+treediff=
+rpmdiff=
+if [ "${1}" = --tree ]; then
+  treediff=1; shift
+elif [ "${1}" = --rpms ]; then
+  rpmdiff=1; shift
+fi
+first=$1; shift
+second=$1; shift
+
+cd "$REPO"
+sudo rm -rf tmp && mkdir tmp
+
+set --
+for img in "$first" "$second"; do
+  digest=$(skopeo inspect -n "$img" | jq -r .Digest | cut -f2 -d:)
+  if ! ostree rev-parse "ocidiff/$digest" &>/dev/null; then
+    if [[ "$img" = containers-storage:* ]]; then
+      # we do this level of indirection instead of directly handing it off to
+      # ostree because otherwise for some reason all remaining builds will use
+      # fuse-overlayfs
+      skopeo copy "$img" oci-archive:tmp.ociarchive
+      img=oci-archive:tmp.ociarchive
+    fi
+    ostree container image pull --ostree-digestfile "$(realpath "$PWD/tmp.digestfile")" . ostree-unverified-image:"$img"
+    ostree_digest="$(cat tmp.digestfile)"
+    ostree refs --create "ocidiff/$digest" "$ostree_digest"
+    rm -f tmp.digestfile tmp.ociarchive
+  fi
+  set -- "$@" "ocidiff/$digest"
+done
+
+if [ -n "${treediff}" ]; then
+  ostree checkout -U "${1}" "tmp/1"
+  ostree checkout -U "${2}" "tmp/2"
+  git diff --no-index tmp/1 tmp/2
+elif [ -n "${rpmdiff}" ]; then
+  git diff --no-index <(podman run --rm --entrypoint '' "${first#containers-storage:}" rpm -qa | sort) <(podman run --rm --entrypoint '' "${second#containers-storage:}" rpm -qa | sort)
+else
+  ostree diff "$@"
+fi

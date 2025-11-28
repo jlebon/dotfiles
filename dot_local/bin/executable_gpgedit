@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+
+# XXX: go back to using fd only, but hack around helix wanting to replace by having a larger hardlink count? https://github.com/helix-editor/helix/pull/11340/
+# or maybe just change helix
+
+# Wrapper to edit GPG-encrypted text files. Decrypts the file to a temporary
+# location, opens the configured editor, and re-encrypts the edited file.
+# Creates the file if it does not yet exist. Assumes a default recipient exists
+# in `gpg.conf`.
+
+fn=$1; shift
+
+tmp=$(mktemp /run/user/$UID/gpgedit-XXXXXX.tmp)
+# exec 3<>"$tmp" && rm "$tmp"
+# exec 3<>"$tmp"
+
+GPG_TTY=$(tty)
+export GPG_TTY
+
+if [ ! -e "$fn" ]; then
+  echo "File does not exist; creating." >&2
+  gpg --quiet --encrypt <<< "" > "$fn"
+fi
+
+# gpg --quiet --decrypt < "$fn" >&3
+gpg --quiet --decrypt < "$fn" > "$tmp"
+
+# before=$(sha256sum /proc/self/fd/3)
+# $EDITOR /proc/self/fd/3
+# after=$(sha256sum /proc/self/fd/3)
+before=$(sha256sum "$tmp")
+$EDITOR "$tmp"
+after=$(sha256sum "$tmp")
+
+if [ "${before}" = "${after}" ]; then
+  echo "No change detected; file unchanged." >&2
+  exit 0
+fi
+
+# gpg --quiet --encrypt < /proc/self/fd/3 > "$fn.new"
+gpg --quiet --encrypt < "$tmp" > "$fn.new"
+rm "$tmp"
+
+mv "$fn.new" "$fn"
+echo "File updated." >&2

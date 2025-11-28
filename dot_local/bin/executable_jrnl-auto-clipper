@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ ! -f /run/.containerenv ]; then
+    while ! podman ps --format "{{.Names}}: {{.State}}" | grep -q '^pet: running$'; do
+        sleep 5
+    done
+
+    while ! podman exec pet true; do
+        sleep 5
+    done
+
+    exec podman exec -u jlebon pet "$0" "$@"
+fi
+
+current=$(wl-paste)
+while inotifywait -e modify ~/.cache/clipboard-history@alexsaveau.dev/database.log; do
+    new=$(wl-paste)
+    if [[ "$new" != "$current" ]]; then
+        /home/jlebon/.local/bin/jrnl-clipper --clipboard --notify --ignore-invalid
+    fi
+    current="$new"
+done

@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+# this wrapper is mostly necessary when copying content in/out of
+# containers-storage; in that case we need to run it from the host context
+
+# workaround for rpm-ostree compose which passes an fd path to skopeo
+# XXX: ideally this would work with our wrapper but need to make sure that the
+# passed fds correctly survive the d-bus call to the flatpak helper
+if grep /proc/self/fd <<< "$@"; then
+    exec /usr/bin/skopeo "$@"
+fi
+
+HOST_SPAWN=
+
+if [ -z "${DISABLE_SKOPEO_WRAPPER:-}" ] && \
+                { [ -f /.dockerenv ] || [ -f /run/.containerenv ]; } && \
+                command -v host-spawn >/dev/null; then
+        echo -e "\033[1;31m> Redirecting to host skopeo\033[0m" >&2
+        HOST_SPAWN="host-spawn -no-pty -env REGISTRY_AUTH_FILE"
+fi
+
+exec $HOST_SPAWN /usr/bin/skopeo "$@"

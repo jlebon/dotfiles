@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+# This command is used to transform a directory into a symlink into
+# `~/.cache/linked/` so that it doesn't get backed up by any backup software
+# that knows to skip over `~/.cache`. Example use case: Rust's `target/` output
+# dir.
+
+dir=$1; shift
+
+mkdir -p "$dir"
+dirpath=$(realpath "$dir")
+mkdir -p ~/".cache/linked/$dirpath"
+rm -rf ~/".cache/linked/$dirpath"
+mv "$dir" ~/".cache/linked/$dirpath"
+ln -s "$(realpath ~/".cache/linked/$dirpath")" .

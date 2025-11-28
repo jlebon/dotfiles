@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euo pipefail
+
+# XXX: merge with git quote
+
+main() {
+    local url
+    url=$(xargs)
+    if [[ $url == https://github.com/* ]]; then
+        url=${url//github.com/api.github.com/repos}
+        url=${url//pull/pulls}
+    elif [[ $url == https://src.fedoraproject.org/* ]]; then
+        url=${url//src.fedoraproject.org/src.fedoraproject.org/api/0}
+    elif [[ $url == https://pagure.io/* ]]; then
+        url=${url//pagure.io/pagure.io/api/0}
+    elif [[ $url == https://*gitlab*/* ]]; then
+        host=${url%.com/*}.com
+        project=${url#"$host/"}
+        project=${project%/-/*}
+        project=${project//\//%2F}
+        subpath=${url#*/-/}
+        url="$host/api/v4/projects/$project/$subpath"
+    fi
+    title=$(curl -sSL "${url}" | jq -r .title)
+    echo -n "${title}"
+}
+
+main "$@"

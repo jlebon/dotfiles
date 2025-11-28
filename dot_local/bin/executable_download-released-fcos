@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+stream=${1:-stable}
+coreos-installer download -s "${stream}" -p qemu -f qcow2.xz --decompress

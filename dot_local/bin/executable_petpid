@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+
+pid=$(podman ps --format json | \
+	jq -r '.[] | select(.State == "running" and .Names == ["pet"]) | .Pid')
+
+if [ -z "$pid" ]; then
+	echo "ERROR: no running pet container found" >&2
+	exit 1
+fi
+
+# re-echo unquoted to trim spaces
+# shellcheck disable=2086
+echo $pid

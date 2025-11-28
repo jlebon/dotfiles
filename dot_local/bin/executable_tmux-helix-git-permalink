@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+# exec &> ~/log.txt
+target_pane=${1:-$TMUX_PANE}
+f=$(tmux-helix-bufinfo file "$target_pane")
+l=$(tmux-helix-bufinfo line "$target_pane")
+url=$(git permalink "$f" "$l")
+${container:+host-spawn} xdg-open "$url"

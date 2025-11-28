@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+target=${1:-.}
+stat --file-system -c '%T' "${target}"

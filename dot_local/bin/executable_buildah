@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+# this wrapper is mostly necessary when copying content in/out of
+# containers-storage; in that case we need to run it from the host context
+
+HOST_SPAWN=
+
+if [ -z "${DISABLE_BUILDAH_WRAPPER:-}" ] && \
+                { [ -f /.dockerenv ] || [ -f /run/.containerenv ]; } && \
+                command -v host-spawn >/dev/null; then
+        echo -e "\033[1;31m> Redirecting to host buildah\033[0m" >&2
+        HOST_SPAWN="host-spawn -no-pty -env REGISTRY_AUTH_FILE"
+fi
+
+exec $HOST_SPAWN /usr/bin/buildah "$@"

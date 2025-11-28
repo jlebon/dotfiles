@@ -1,0 +1,37 @@
+#!/bin/bash
+set -euo pipefail
+
+# much faster alternative to `podman exec` which also allows working with pet
+# tools that need to manipulate the host terminal (e.g. fzf)
+
+if [ ! -f /run/.toolboxenv ]; then
+    exec nsenter -t "$(petpid)" -U -m "$0" "$@"
+fi
+
+exe=$(basename "$0")
+
+# put this dir at the end of PATH so that we don't recursively call ourselves
+# this will recurse if the executable doesn't exist in the container, so check guard
+if [ -n "${PET_NSENTER_GUARD:-}" ]; then
+    echo "pet-nsenter: $exe: command not found" >&2
+    exit 1
+fi
+
+# XXX: but this still has the consequence that the target application runs with
+# a different PATH
+# XXX: maybe instead of this script, it should be accessible from the host only
+# (e.g. bash function, or new PATH entry just on the host)
+
+# https://unix.stackexchange.com/a/108933
+function path_remove {
+  PATH=":$PATH:"
+  PATH=${PATH//":"/"::"}
+  PATH=${PATH//":$1:"/}
+  PATH=${PATH//"::"/":"}
+  PATH=${PATH#:}; PATH=${PATH%:}
+} 
+path_remove "$HOME/.local/bin"
+export PATH=$PATH:$HOME/.local/bin
+export PET_NSENTER_GUARD=1
+
+exec "$exe" "$@"

@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+# Reads in stdin and looks for links in there. Opens the last link found. In the
+# future, we could enhance this so that if multiple links are found, we present
+# an fzf interface to select the one we want.
+
+last_link=$(grep -o -E 'https?://[^] ),:>]+' | tail -n 1)
+
+# strip any trailing period
+xdg-open "${last_link%.}"

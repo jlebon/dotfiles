@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+# based on the idea and regex in
+# https://github.com/helix-editor/helix/issues/3035#issuecomment-1575437988
+
+field=$1; shift
+target_pane=${1:-$TMUX_PANE}
+
+tmux capture-pane -p -t "${target_pane}" | \
+  rg -e "(?:NOR|INS|SEL)\s+.\s+(?<file>\S*)\s+(?:\[.\])?\s+(?:\S\s\d+\s+)?\d+\s+sels?\s+(?<line>\d+):(?<column>\d+)" -o --replace "\$$field"

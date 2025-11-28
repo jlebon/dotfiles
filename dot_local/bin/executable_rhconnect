@@ -1,0 +1,51 @@
+#!/bin/bash
+set -euo pipefail
+
+# Connects to the Red Hat network and sets up Kerberos tickets. Assumes the
+# network is called "Red Hat". If running from a container, assumes host-spawn
+# is in the PATH.
+
+HOST_SPAWN=
+
+if [ -f /.dockerenv ] || [ -f /run/.containerenv ] && \
+        command -v host-spawn >/dev/null; then
+    HOST_SPAWN="host-spawn -no-pty"
+fi
+
+while true; do
+    read -r -p 'Enter password: ' -s PW; echo
+    if [ -f "$HOME/.config/rhconnect-pwdigest" ]; then
+        digest=$(sha256sum <<< "${PW}" | cut -f1 -d' ')
+        if [ "$digest" != "$(cat "$HOME/.config/rhconnect-pwdigest")" ]; then
+            echo 'Incorrect password!' >&2
+            continue
+        fi
+    fi
+    break
+done
+
+PINPW=$(tr -cd '[:alnum:]' <<< "${PW@L}")
+
+if ! $HOST_SPAWN nmcli con show --active | grep -qE '^Red Hat +[a-f0-9-]+ *vpn +[a-z0-9]+ *$'; then
+    while true; do
+        if [ -z "${DISABLE_YUBIKEY:-}" ] && command -v ykman &>/dev/null && [ -n "$(ykman list)" ]; then
+            PIN=$(ykman oath accounts code -s redhat)
+        else
+            read -r -p 'Enter PIN: ' -s PIN; echo
+        fi
+        if [ ${#PIN} != 6 ]; then
+            echo 'PIN is incorrect length!' >&2
+            continue
+        fi
+        break
+    done
+    tmp=$(mktemp /run/user/$UID/rhconnect-XXXXXX.tmp)
+    exec 3<>"$tmp" && rm "$tmp"
+    cat >&3 <<< "vpn.secrets.password:${PINPW}${PIN}"
+    $HOST_SPAWN sh -c "nmcli con up id 'Red Hat' passwd-file /proc/$$/fd/3"
+fi
+
+(kdestroy -p jlebon@IPA.REDHAT.COM || :) &>/dev/null
+echo "${PW}" | kinit jlebon@IPA.REDHAT.COM
+
+kswitch -p jlebon@IPA.REDHAT.COM

@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ ! -f /run/.toolboxenv ]; then
+        # exec toolbox run -c pet "$0" "$@"
+        exec podman exec -i pet "$0" "$@"
+fi
+
+# remove this dir from PATH so that we don't recursively call ourselves
+
+# https://unix.stackexchange.com/a/108933
+function path_remove {
+  PATH=":$PATH:"
+  PATH=${PATH//":"/"::"}
+  PATH=${PATH//":$1:"/}
+  PATH=${PATH//"::"/":"}
+  PATH=${PATH#:}; PATH=${PATH%:}
+} 
+path_remove "$HOME/.local/bin"
+
+exe=$(basename "$0")
+exec "$exe" "$@"

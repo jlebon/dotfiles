@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+import subprocess
+import argparse
+import json
+import re
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--clipboard', action='store_true')
+    parser.add_argument('--notify', action='store_true')
+    parser.add_argument('--ignore-invalid', action='store_true')
+    args = parser.parse_args()
+
+    try:
+        added, title = jrnl(args)
+        if title and args.notify:
+            if added:
+                subprocess.check_call(['notify-send', '--app-name=jrnl-clipper', '--transient', f'Added: {title}'])
+            else:
+                subprocess.check_call(['notify-send', '--app-name=jrnl-clipper', '--transient', f'Ignored duplicate: {title}'])
+    except Exception as e:
+        if args.notify:
+            subprocess.check_call(['notify-send', '--app-name=jrnl-clipper', str(e)])
+        raise e
+
+
+def jrnl(args):
+    if args.clipboard:
+        text = subprocess.check_output(['wl-paste', '-t', 'text/plain;charset=utf-8'], encoding='utf-8')
+    else:
+        text = input('> ')
+
+    regex = re.compile(r'^\[(.*)\]\((.*)\)$')
+    matches = regex.match(text)
+    if not matches:
+        if args.ignore_invalid:
+            return False, None
+        raise f'Failed to parse: {text}'
+
+    title = matches.group(1)
+    link = matches.group(2)
+
+    if jrnl_entry_exists(title):
+        return False, title
+
+    subprocess.run(['jrnl'], check=True, input=f'now: {title}\n{link}', text=True)
+    return True, title
+
+
+def jrnl_entry_exists(entry_title):
+    entries_raw = subprocess.check_output(['jrnl', '-on=today', '--format=json'], encoding='utf-8')
+    if entries_raw == '':
+        return False
+    entries = json.loads(entries_raw)
+    for entry in entries['entries']:
+        if entry['title'] == entry_title:
+            return True
+    return False
+
+
+if __name__ == '__main__':
+    main()

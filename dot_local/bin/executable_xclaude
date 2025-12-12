@@ -66,8 +66,12 @@ imageid=$(source /run/.containerenv; echo "${imageid}")
 podman_args=(
     run --rm -ti
     --hostname claude
+    --label xclaude=1
+    --env PATH
     --env HOME="${HOME}"
     --tmpfs "${HOME}"
+    -v "${HOME}/.cargo:${HOME}/.cargo:z"
+    -v "${HOME}/.rustup:${HOME}/.rustup:ro,z"
     -v "${HOME}"/node_modules:"${HOME}"/node_modules:O
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:z
     -v "${HOME}"/.claude.json:"${HOME}"/.claude.json:z
@@ -99,6 +103,12 @@ done
 for vol in "${extra_volumes[@]}"; do
     podman_args+=(-v "${vol}")
 done
+
+# add tmux info if we're running in tmux
+if [ -n "${TMUX_PANE:-}" ]; then
+    podman_args+=(--label TMUX_PANE="${TMUX_PANE}")
+    podman_args+=(--label TMUX_WINDOW="$(tmux display-message -p '#{window_id}')")
+fi
 
 # claude env vars
 # shellcheck disable=SC1090

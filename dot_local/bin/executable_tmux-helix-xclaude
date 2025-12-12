@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+shopt -s inherit_errexit
+
+# Send file/line context from the current helix buffer to an xclaude instance
+# running in the same tmux window.
+#
+# If XC_FOCUS is set: switch focus to that pane so the user can type their query.
+# Otherwise: send all arguments as the query and press Enter.
+
+export HOST_SPAWN_QUIET=1
+
+current_window=$(tmux display-message -p '#{window_id}')
+
+# Find all xclaude containers and look for one matching our window
+target_pane=""
+while read -r container_id; do
+    window_label=$(podman inspect --format '{{index .Config.Labels "TMUX_WINDOW"}}' "$container_id")
+    if [ "$window_label" = "$current_window" ]; then
+        target_pane=$(podman inspect --format '{{index .Config.Labels "TMUX_PANE"}}' "$container_id")
+        break
+    fi
+done < <(podman ps --filter=label=xclaude=1 --format '{{.ID}}')
+
+if [ -z "$target_pane" ]; then
+    echo "ERROR: No xclaude instance found for window $current_window" >&2
+    exit 1
+fi
+
+# Get file and line from helix buffer info
+# When not in focus mode, wait a bit for helix to hide the command box so we can read the status line
+[ -z "${XC_FOCUS:-}" ] && sleep 0.25
+file=$(tmux-helix-bufinfo file)
+line=$(tmux-helix-bufinfo line)
+
+# Send file/line context to the xclaude pane
+if [ -n "${XC_FOCUS:-}" ]; then
+    tmux send-keys -t "$target_pane" "in file $file at line $line: "
+    tmux select-pane -t "$target_pane"
+else
+    tmux send-keys -t "$target_pane" "in file $file at line $line: $*"
+    tmux send-keys -t "$target_pane" Enter
+fi

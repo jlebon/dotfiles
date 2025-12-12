@@ -1,0 +1,54 @@
+theme = "monokai_pro_machine"
+
+[editor]
+bufferline = "multiple"
+cursorline = true
+line-number = "relative"
+auto-pairs = false
+# preview-completion-insert = true
+# persistent-undo = true
+
+# until it's the new default
+rainbow-brackets = true
+
+# until it's the new default
+# https://github.com/helix-editor/helix/pull/6417
+end-of-line-diagnostics = "hint"
+[editor.inline-diagnostics]
+cursor-line = "warning" # show warnings and errors on the cursorline inline
+
+[editor.soft-wrap]
+enable = true
+wrap-at-text-width = false
+
+[editor.whitespace.render]
+tab = "all"
+
+[editor.whitespace.characters]
+tab = "⸽"
+
+[editor.file-picker]
+hidden = false
+
+[editor.lsp]
+display-inlay-hints = true
+
+# [editor.jump-mode]
+# num-chars-before-label = 2
+# jump-keys = "asdfghjkleruity"
+
+[keys.normal]
+# some vim bindings
+C-h = ":buffer-close"
+C-e = "scroll_down"
+C-y = "scroll_up"
+# D = ["goto_first_nonwhitespace", "extend_to_line_end", "change_selection"]
+"space" = { x = ":reflow", q = ":sh XC_FOCUS=1 tmux-helix-xclaude" }
+# https://github.com/helix-editor/helix/issues/3035#issuecomment-1575437988
+g = { P = ":pipe-to tmux-helix-git-permalink" }
+# make search become word bounded
+#"A-*" = ["make_search_word_bounded", "search_next"]
+# make * like vim
+# "*" = ["move_prev_word_start", "move_next_word_end", "search_selection", "make_search_word_bounded", "search_next"]
+#g = { o = ":pipe xdg-open-tbx" }
+# C-g = { r = ":reset-diff-change" }

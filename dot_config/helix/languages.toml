@@ -1,0 +1,52 @@
+[language-server.pylsp]
+config = { pylsp.plugins.pycodestyle.ignore = ["E501"] }
+
+[[language]]
+name = "json"
+file-types = ["json", "jsonc", "ign"]
+
+[[language]]
+name = "yaml"
+file-types = ["yaml", "yml", "bu", "fcc"]
+
+[[language]]
+name = "groovy"
+file-types = ["gradle", "groovy", "jenkinsfile", "Jenkinsfile", { glob = "Jenkinsfile" },  { glob = "Jenkinsfile.*" }]
+
+# https://github.com/estin/simple-completion-language-server
+
+[language-server.scls]
+command = "simple-completion-language-server"
+
+[language-server.scls.config]
+max_completion_items = 20     # set max completion results len for each group: words, snippets, unicode-input
+
+[[language]]
+name = "java"
+language-servers = [ "scls" ]
+
+[[language]]
+name = "yaml"
+language-servers = [ "scls" ]
+
+[[language]]
+name = "json"
+language-servers = [ "scls" ]
+
+[[language]]
+name = "markdown"
+language-servers = [ "scls" ]
+
+[[language]]
+name = "git-commit"
+language-servers = [ "scls" ]
+
+# introduce a new language to enable completion on any doc by forcing set language with :set-language stub
+[[language]]
+name = "scls"
+scope = "text.scls"
+file-types = []
+shebangs = []
+roots = []
+auto-format = false
+language-servers = [ "scls" ]

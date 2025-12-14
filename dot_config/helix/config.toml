@@ -43,7 +43,7 @@ C-h = ":buffer-close"
 C-e = "scroll_down"
 C-y = "scroll_up"
 # D = ["goto_first_nonwhitespace", "extend_to_line_end", "change_selection"]
-"space" = { x = ":reflow", q = ":sh XC_FOCUS=1 tmux-helix-xclaude" }
+"space" = { x = ":reflow", q = ":sh tmux-helix-xclaude" }
 # https://github.com/helix-editor/helix/issues/3035#issuecomment-1575437988
 g = { P = ":pipe-to tmux-helix-git-permalink" }
 # make search become word bounded

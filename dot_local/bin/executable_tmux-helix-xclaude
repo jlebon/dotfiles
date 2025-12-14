@@ -2,13 +2,16 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
-# Send file/line context from the current helix buffer to an xclaude instance
-# running in the same tmux window.
+# Send a query to an xclaude instance running in the same tmux window.
 #
-# If XC_FOCUS is set: switch focus to that pane so the user can type their query.
-# Otherwise: send all arguments as the query and press Enter.
+# Modes based on how it's called:
+#   tmux-helix-xclaude: send file/line context, switch focus (for helix hotkey)
+#   xch: send file/line context + arguments, press Enter
+#   xc:  send just the arguments, press Enter (no file/line prefix)
 
 export HOST_SPAWN_QUIET=1
+
+mode=$(basename "$0")
 
 current_window=$(tmux display-message -p '#{window_id}')
 
@@ -27,17 +30,25 @@ if [ -z "$target_pane" ]; then
     exit 1
 fi
 
-# Get file and line from helix buffer info
-# When not in focus mode, wait a bit for helix to hide the command box so we can read the status line
-[ -z "${XC_FOCUS:-}" ] && sleep 0.25
-file=$(tmux-helix-bufinfo file)
-line=$(tmux-helix-bufinfo line)
-
-# Send file/line context to the xclaude pane
-if [ -n "${XC_FOCUS:-}" ]; then
-    tmux send-keys -t "$target_pane" "in file $file at line $line: "
-    tmux select-pane -t "$target_pane"
-else
-    tmux send-keys -t "$target_pane" "in file $file at line $line: $*"
-    tmux send-keys -t "$target_pane" Enter
-fi
+# Send to the xclaude pane based on mode
+case "$mode" in
+    xc)
+        tmux send-keys -t "$target_pane" "$*"
+        tmux send-keys -t "$target_pane" Enter
+        ;;
+    xch)
+        # Wait a bit for helix to hide the command box so we can read the status line
+        sleep 0.25
+        file=$(tmux-helix-bufinfo file)
+        line=$(tmux-helix-bufinfo line)
+        tmux send-keys -t "$target_pane" "in file $file at line $line: $*"
+        tmux send-keys -t "$target_pane" Enter
+        ;;
+    *)
+        # tmux-helix-xclaude: focus mode for helix hotkey
+        file=$(tmux-helix-bufinfo file)
+        line=$(tmux-helix-bufinfo line)
+        tmux send-keys -t "$target_pane" "in file $file at line $line: "
+        tmux select-pane -t "$target_pane"
+        ;;
+esac

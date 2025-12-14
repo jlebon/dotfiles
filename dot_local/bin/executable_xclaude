@@ -22,6 +22,7 @@ extra_volumes=()
 claude_args=()
 git_mount_mode=ro
 run_bash=false
+custom_image=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --git-rw)
@@ -31,6 +32,14 @@ while [ $# -gt 0 ]; do
         --bash)
             run_bash=true
             shift
+            ;;
+        --image)
+            if [ -z "${2:-}" ]; then
+                echo "ERROR: --image requires an image argument" >&2
+                exit 1
+            fi
+            custom_image="$2"
+            shift 2
             ;;
         --add-dir)
             if [ -z "${2:-}" ]; then
@@ -71,7 +80,11 @@ fi
 
 cd "$(realpath "${PWD}")"
 
-imageid=$(source /run/.containerenv; echo "${imageid}")
+if [ -n "${custom_image}" ]; then
+    imageid="${custom_image}"
+else
+    imageid=$(source /run/.containerenv; echo "${imageid}")
+fi
 
 podman_args=(
     run --rm -ti

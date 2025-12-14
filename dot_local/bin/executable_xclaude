@@ -21,10 +21,15 @@ add_dirs=()
 extra_volumes=()
 claude_args=()
 git_mount_mode=ro
+run_bash=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --git-rw)
             git_mount_mode=rw
+            shift
+            ;;
+        --bash)
+            run_bash=true
             shift
             ;;
         --add-dir)
@@ -138,12 +143,15 @@ export HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PR
 # (there's IS_SANDBOX=1, but then you have to approve a bypass prompt)
 podman_args+=(--userns=keep-id)
 
-# and the actual image
-podman_args+=(
-    "${imageid}"
-    npm exec claude
-    --
-    --dangerously-skip-permissions
-)
-
-exec podman "${podman_args[@]}" "${claude_args[@]}"
+# and the actual image and command
+podman_args+=("${imageid}")
+if [ "${run_bash}" = "true" ]; then
+    exec podman "${podman_args[@]}" bash
+else
+    podman_args+=(
+        npm exec claude
+        --
+        --dangerously-skip-permissions
+    )
+    exec podman "${podman_args[@]}" "${claude_args[@]}"
+fi

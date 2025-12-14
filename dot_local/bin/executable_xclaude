@@ -99,7 +99,6 @@ podman_args=(
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:z
     -v "${HOME}"/.claude.json:"${HOME}"/.claude.json:z
     -v "${HOME}"/.claude:"${HOME}"/.claude:z
-    -v "${HOME}"/.ssh/id_rsa.flux.pub:"${HOME}"/.ssh/id_rsa.flux.pub:ro,z
     -v "${PWD}":"${PWD}":z
     -w "${PWD}"
 )
@@ -112,6 +111,8 @@ if [ -e .git ]; then
     podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:"${git_mount_mode}")
     if [ "${git_mount_mode}" = "rw" ]; then
         podman_args+=(-v "${HOME}/.gitconfig:${HOME}/.gitconfig:ro,z")
+        podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign:${HOME}/.ssh/id_ed25519.git-sign:ro,z")
+        podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign.pub:${HOME}/.ssh/id_ed25519.git-sign.pub:ro,z")
         # Create a read-only backup of .git for recovery
         rm -rf .gitro
         cp --reflink=always -a .git .gitro

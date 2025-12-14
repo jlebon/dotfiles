@@ -20,8 +20,13 @@ fi
 add_dirs=()
 extra_volumes=()
 claude_args=()
+git_mount_mode=ro
 while [ $# -gt 0 ]; do
     case "$1" in
+        --git-rw)
+            git_mount_mode=rw
+            shift
+            ;;
         --add-dir)
             if [ -z "${2:-}" ]; then
                 echo "ERROR: --add-dir requires a directory argument" >&2
@@ -76,6 +81,7 @@ podman_args=(
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:z
     -v "${HOME}"/.claude.json:"${HOME}"/.claude.json:z
     -v "${HOME}"/.claude:"${HOME}"/.claude:z
+    -v "${HOME}"/.ssh/id_rsa.flux.pub:"${HOME}"/.ssh/id_rsa.flux.pub:ro,z
     -v "${PWD}":"${PWD}":z
     -w "${PWD}"
 )
@@ -83,9 +89,16 @@ podman_args=(
 if [ -e .git ]; then
     if [ -f .git ]; then
         primary_worktree=$(git worktree list | head -n1 | cut -f1 -d' ')
-        podman_args+=(-v "${primary_worktree}:${primary_worktree}:ro")
+        podman_args+=(-v "${primary_worktree}:${primary_worktree}:${git_mount_mode}")
     fi
-    podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:ro)
+    podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:"${git_mount_mode}")
+    if [ "${git_mount_mode}" = "rw" ]; then
+        podman_args+=(-v "${HOME}/.gitconfig:${HOME}/.gitconfig:ro,z")
+        # Create a read-only backup of .git for recovery
+        rm -rf .gitro
+        cp --reflink=always -a .git .gitro
+        podman_args+=(-v "${PWD}"/.gitro:"${PWD}"/.gitro:ro)
+    fi
     # If there's a target/ that's a symlink, mount its target too.
     # See `mkcachedir` for the use case for this.
     if [ -L target ]; then

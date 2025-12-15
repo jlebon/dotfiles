@@ -23,6 +23,7 @@ claude_args=()
 git_mount_mode=ro
 run_bash=false
 custom_image=""
+mount_gh=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --git-rw)
@@ -40,6 +41,10 @@ while [ $# -gt 0 ]; do
             fi
             custom_image="$2"
             shift 2
+            ;;
+        --gh)
+            mount_gh=true
+            shift
             ;;
         --add-dir)
             if [ -z "${2:-}" ]; then
@@ -136,6 +141,12 @@ for vol in "${extra_volumes[@]}"; do
     podman_args+=(-v "${vol}")
 done
 
+if [ "${mount_gh}" = "true" ]; then
+    GITHUB_TOKEN=$(gh auth token)
+    export GITHUB_TOKEN
+    podman_args+=(--env GITHUB_TOKEN)
+fi
+
 # add tmux info if we're running in tmux
 if [ -n "${TMUX_PANE:-}" ]; then
     podman_args+=(--label TMUX_PANE="${TMUX_PANE}")
@@ -151,7 +162,11 @@ podman_args+=(
     --env ANTHROPIC_VERTEX_PROJECT_ID
     --env DISABLE_AUTOUPDATER=1
 )
-export HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
+HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
+if [ "${mount_gh}" = "true" ]; then
+    HOST_SPAWN_ENV="${HOST_SPAWN_ENV},GITHUB_TOKEN"
+fi
+export HOST_SPAWN_ENV
 
 # claude doesn't like running as root with --dangerously-skip-permissions
 # (there's IS_SANDBOX=1, but then you have to approve a bypass prompt)

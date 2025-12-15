@@ -120,9 +120,10 @@ if [ -e .git ]; then
         podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign:${HOME}/.ssh/id_ed25519.git-sign:ro,z")
         podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign.pub:${HOME}/.ssh/id_ed25519.git-sign.pub:ro,z")
         # Create a read-only backup of .git for recovery
-        rm -rf .gitro
-        cp --reflink=always -a .git .gitro
-        podman_args+=(-v "${PWD}"/.gitro:"${PWD}"/.gitro:ro)
+        rm -rf .git/bak
+        cp --reflink=always -a .git .git-bak-tmp
+        mv .git-bak-tmp .git/bak
+        podman_args+=(-v "${PWD}"/.git/bak:"${PWD}"/.git/bak:ro)
     fi
     # If there's a target/ that's a symlink, mount its target too.
     # See `mkcachedir` for the use case for this.

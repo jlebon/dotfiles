@@ -93,7 +93,6 @@ fi
 
 podman_args=(
     run --rm -ti
-    --hostname claude
     --label xclaude=1
     --env PATH
     --env HOME="${HOME}"
@@ -168,6 +167,15 @@ HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_I
 if [ "${mount_gh}" = "true" ]; then
     HOST_SPAWN_ENV="${HOST_SPAWN_ENV},GITHUB_TOKEN"
 fi
+
+# cargo env vars - pass through all CARGO_* variables
+while IFS='=' read -r var _; do
+    if [[ "$var" == CARGO_* ]]; then
+        podman_args+=(--env "$var")
+        HOST_SPAWN_ENV="${HOST_SPAWN_ENV},${var}"
+    fi
+done < <(env)
+
 export HOST_SPAWN_ENV
 
 # claude doesn't like running as root with --dangerously-skip-permissions

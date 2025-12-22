@@ -177,6 +177,14 @@ while IFS='=' read -r var _; do
     fi
 done < <(env)
 
+# C/C++ compiler env vars
+for var in CC CFLAGS CXXFLAGS; do
+    if [ -n "${!var:-}" ]; then
+        podman_args+=(--env "$var")
+        HOST_SPAWN_ENV="${HOST_SPAWN_ENV},${var}"
+    fi
+done
+
 export HOST_SPAWN_ENV
 
 # claude doesn't like running as root with --dangerously-skip-permissions

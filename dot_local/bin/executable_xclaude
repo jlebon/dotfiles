@@ -113,12 +113,12 @@ if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ]; then
 fi
 
 # Check if there's a newer version of claude-code available
-claude_manifest=~/node_modules/\@anthropic-ai/claude-code/package.json
+claude_manifest=~/Code/nodejs/lib/node_modules/\@anthropic-ai/claude-code/package.json
 current_version=$(jq -r '.version' "${claude_manifest}")
 latest_version=$(curl -s https://registry.npmjs.org/@anthropic-ai/claude-code/latest | jq -r '.version')
 if [ -n "${latest_version}" ] && [ "${current_version}" != "${latest_version}" ]; then
     echo "Updating @anthropic-ai/claude-code from ${current_version} to ${latest_version}..."
-    npm update @anthropic-ai/claude-code
+    npm update --prefix ~/Code/nodejs -g @anthropic-ai/claude-code
 fi
 
 cd "$(realpath "${PWD}")"
@@ -139,7 +139,7 @@ podman_args=(
     -v "${HOME}/.cache"
     -v "${HOME}/.cargo:${HOME}/.cargo:z"
     -v "${HOME}/.rustup:${HOME}/.rustup:ro,z"
-    -v "${HOME}"/node_modules:"${HOME}"/node_modules:O
+    -v "${HOME}"/Code/nodejs:"${HOME}"/Code/nodejs:O
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:z
     -v "${HOME}"/.claude.json:"${HOME}"/.claude.json:z
     -v "${HOME}"/.claude:"${HOME}"/.claude:z
@@ -201,7 +201,7 @@ fi
 
 # claude env vars
 # shellcheck disable=SC1090
-source ~/Temp/claude-env-work.sh
+source ~/"Documents/Red Hat/claude-env.sh"
 podman_args+=(
     --env CLAUDE_CODE_USE_VERTEX
     --env CLOUD_ML_REGION
@@ -241,8 +241,7 @@ if [ "${run_bash}" = "true" ]; then
     exec podman "${podman_args[@]}" bash
 else
     podman_args+=(
-        npm exec claude
-        --
+        "${HOME}"/Code/nodejs/bin/claude
         --dangerously-skip-permissions
     )
     exec podman "${podman_args[@]}" "${claude_args[@]}"

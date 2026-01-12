@@ -1,0 +1,43 @@
+#!/bin/bash
+# Displays currently playing song from MPRIS-compatible players via D-Bus
+# Returns empty string on error/stopped/no player for silent tmux integration
+
+set -euo pipefail
+
+MAX_LEN=60
+
+# Only use Spotify
+player="org.mpris.MediaPlayer2.spotify"
+
+# Check if Spotify is running
+busctl --user --json=pretty list 2>/dev/null | \
+    jq -e '.[] | select(.name == "org.mpris.MediaPlayer2.spotify")' >/dev/null 2>&1|| exit 0
+
+# Check playback status
+status=$(busctl --user --json=pretty get-property "$player" \
+    /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player PlaybackStatus 2>/dev/null | \
+    jq -r '.data')
+
+[[ "$status" != "Playing" && "$status" != "Paused" ]] && exit 0
+
+# Get metadata
+metadata=$(busctl --user --json=pretty get-property "$player" \
+    /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player Metadata 2>/dev/null)
+
+artist=$(echo "$metadata" | jq -r '.data["xesam:artist"].data[0] // empty')
+title=$(echo "$metadata" | jq -r '.data["xesam:title"].data // empty')
+
+[[ -z "$title" ]] && exit 0
+
+if [[ -n "$artist" ]]; then
+    output="$artist - $title"
+else
+    output="$title"
+fi
+
+# Truncate if too long
+if [[ ${#output} -gt $MAX_LEN ]]; then
+    output="${output:0:$((MAX_LEN - 1))}…"
+fi
+
+echo "♫  $output | "

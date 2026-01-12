@@ -172,9 +172,8 @@ if [ -e .git ]; then
 fi
 
 for dir in "${add_dirs[@]}"; do
-    container_dir="/dirs/$(basename "${dir}")"
-    podman_args+=(-v "${dir}:${container_dir}:z")
-    claude_args+=(--add-dir "${container_dir}")
+    podman_args+=(-v "${dir}:${dir}:z")
+    claude_args+=(--add-dir "${dir}")
 done
 
 for repo in "${add_repos[@]}"; do

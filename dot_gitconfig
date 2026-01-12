@@ -10,7 +10,6 @@
 	lsb = "!f() { : git branch; git bstatus \"$@\"; }; f"
 	format-one-patch = "!f() { : git format-patch; git format-patch ${1}^..${1} \"$@\"; }; f"
 	d = diff
-	wip = commit -am "wip"
 	scrap = reset --hard HEAD
 	rob = reset HEAD^
 	nuke = reset --hard HEAD^

@@ -1,0 +1,50 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+# Quick work-in-progress commit with auto-generated message showing what changed.
+# Message format: "file1: +10 lines/-5 lines" or "file4 (+N more): +X lines/-Y lines"
+
+# Stage all tracked modified files (like -a flag)
+git add -u
+
+# Get diff stats for staged changes
+stats=$(git diff --cached --numstat)
+
+if [ -z "$stats" ]; then
+    echo "Nothing to commit" >&2
+    exit 1
+fi
+
+# Parse stats: find file with most changes and calculate totals
+total_added=0
+total_removed=0
+max_changes=0
+max_file=""
+file_count=0
+
+while IFS=$'\t' read -r added removed file; do
+    # Handle binary files (shown as -)
+    [ "$added" = "-" ] && added=0
+    [ "$removed" = "-" ] && removed=0
+
+    total_added=$((total_added + added))
+    total_removed=$((total_removed + removed))
+    file_count=$((file_count + 1))
+
+    changes=$((added + removed))
+    if [ "$changes" -gt "$max_changes" ]; then
+        max_changes=$changes
+        max_file=$file
+    fi
+done <<< "$stats"
+
+# Build commit message
+max_file=$(basename "$max_file")
+if [ "$file_count" -eq 1 ]; then
+    msg="${max_file}: +${total_added} lines/-${total_removed} lines"
+else
+    others=$((file_count - 1))
+    msg="${max_file} (+${others} more): +${total_added} lines/-${total_removed} lines"
+fi
+
+git commit -m "WIP: $msg"

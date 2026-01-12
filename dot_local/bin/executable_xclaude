@@ -25,6 +25,7 @@ git_mount_mode=ro
 run_bash=false
 custom_image=""
 mount_gh=false
+mount_glab=false
 usage() {
     cat <<EOF
 Usage: xclaude [OPTIONS] [-- CLAUDE_ARGS...]
@@ -37,6 +38,7 @@ Options:
   --bash        Run bash instead of claude
   --image IMG   Use a custom container image
   --gh          Mount GitHub credentials and set GITHUB_TOKEN
+  --glab        Mount GitLab CLI config
   --add-dir DIR Add a directory to the container
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
@@ -73,6 +75,10 @@ while [ $# -gt 0 ]; do
             ;;
         --gh)
             mount_gh=true
+            shift
+            ;;
+        --glab)
+            mount_glab=true
             shift
             ;;
         --add-dir)
@@ -190,6 +196,10 @@ if [ "${mount_gh}" = "true" ]; then
     GITHUB_TOKEN=$(gh auth token)
     export GITHUB_TOKEN
     podman_args+=(--env GITHUB_TOKEN)
+fi
+
+if [ "${mount_glab}" = "true" ]; then
+    podman_args+=(-v "${HOME}/.config/glab-cli/config.yml:${HOME}/.config/glab-cli/config.yml:ro,z")
 fi
 
 # add tmux info if we're running in tmux

@@ -24,8 +24,35 @@ git_mount_mode=ro
 run_bash=false
 custom_image=""
 mount_gh=false
+usage() {
+    cat <<EOF
+Usage: xclaude [OPTIONS] [-- CLAUDE_ARGS...]
+
+Run claude in an unprivileged container.
+
+Options:
+  -h            Show this help message
+  --git-rw      Mount .git directory read-write (default: read-only)
+  --bash        Run bash instead of claude
+  --image IMG   Use a custom container image
+  --gh          Mount GitHub credentials and set GITHUB_TOKEN
+  --add-dir DIR Add a directory to the container
+  -v VOLUME     Add an extra volume mount
+  --            Stop parsing options; remaining args passed to claude
+EOF
+}
+
 while [ $# -gt 0 ]; do
     case "$1" in
+        -h)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            claude_args+=("$@")
+            break
+            ;;
         --git-rw)
             git_mount_mode=rw
             shift

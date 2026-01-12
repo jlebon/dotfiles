@@ -10,6 +10,7 @@ main() {
     local commit repo
     commit=$(git rev-parse "${1}")
     repo=$(get_github_repo)
+    repo=${repo%/}
     local api_url="https://api.github.com/repos/${repo}/commits/${commit}/pulls"
     curl -s "$api_url" | jq -r .[].html_url
 }

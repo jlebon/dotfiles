@@ -18,6 +18,7 @@ fi
 
 # Parse our own arguments
 add_dirs=()
+add_repos=()
 extra_volumes=()
 claude_args=()
 git_mount_mode=ro
@@ -37,6 +38,7 @@ Options:
   --image IMG   Use a custom container image
   --gh          Mount GitHub credentials and set GITHUB_TOKEN
   --add-dir DIR Add a directory to the container
+  --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
   --            Stop parsing options; remaining args passed to claude
 EOF
@@ -79,6 +81,15 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             add_dirs+=("$(realpath "$2")")
+            shift 2
+            ;;
+        --add-repo)
+            if [ -z "${2:-}" ]; then
+                echo "ERROR: --add-repo requires a repo name argument" >&2
+                exit 1
+            fi
+            IFS=',' read -ra repos <<< "$2"
+            add_repos+=("${repos[@]}")
             shift 2
             ;;
         -v)
@@ -164,6 +175,12 @@ for dir in "${add_dirs[@]}"; do
     container_dir="/dirs/$(basename "${dir}")"
     podman_args+=(-v "${dir}:${container_dir}:z")
     claude_args+=(--add-dir "${container_dir}")
+done
+
+for repo in "${add_repos[@]}"; do
+    repo_path=$(codeswitch ~/Code "${repo}")
+    podman_args+=(-v "${repo_path}:${repo_path}:z")
+    claude_args+=(--add-dir "${repo_path}")
 done
 
 for vol in "${extra_volumes[@]}"; do

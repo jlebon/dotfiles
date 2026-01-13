@@ -43,7 +43,8 @@ C-h = ":buffer-close"
 C-e = "scroll_down"
 C-y = "scroll_up"
 # D = ["goto_first_nonwhitespace", "extend_to_line_end", "change_selection"]
-"space" = { x = ":reflow", q = ":sh tmux-helix-xclaude" }
+# XXX: chaining :reload-all wouldn't work here because sh runs async so it'd run immediately. Hackily work around it using tmux send-keys
+"space" = { x = ":reflow", q = ":sh tmux-helix-xclaude", W = [":sh git wip > /dev/null 2>&1 && tmux send-keys :rla Enter"] }
 # https://github.com/helix-editor/helix/issues/3035#issuecomment-1575437988
 g = { P = ":pipe-to tmux-helix-git-permalink" }
 # make search become word bounded

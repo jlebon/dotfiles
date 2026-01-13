@@ -48,7 +48,7 @@ case "$mode" in
         # tmux-helix-xclaude: focus mode for helix hotkey
         file=$(tmux-helix-bufinfo file)
         line=$(tmux-helix-bufinfo line)
-        tmux send-keys -t "$target_pane" "in file $file at line $line: "
+        tmux send-keys -t "$target_pane" "in file $file at line $line (reread the file carefully, it may have changed): "
         tmux select-pane -t "$target_pane"
         ;;
 esac

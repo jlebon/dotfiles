@@ -30,9 +30,25 @@ if [ -z "$target_pane" ]; then
     exit 1
 fi
 
+# Expand pane if it's minimized (1 row)
+pane_height=$(tmux display-message -p -t "$target_pane" '#{pane_height}')
+if [ "$pane_height" -eq 1 ]; then
+    tmux resize-pane -t "$target_pane" -y 999
+fi
+
 # Send to the xclaude pane based on mode
+clear_input() {
+    # there's Esc Esc also, but that would also stop Claude execution if it's currently working
+    for i in {1..10}; do
+        tmux send-keys -t "$target_pane" Home
+        sleep 0.01
+        tmux send-keys -t "$target_pane" C-k
+    done
+}
+
 case "$mode" in
     xc)
+        clear_input
         tmux send-keys -t "$target_pane" "$*"
         tmux send-keys -t "$target_pane" Enter
         ;;
@@ -41,6 +57,7 @@ case "$mode" in
         sleep 0.25
         file=$(tmux-helix-bufinfo file)
         line=$(tmux-helix-bufinfo line)
+        clear_input
         tmux send-keys -t "$target_pane" "in file $file at line $line: $*"
         tmux send-keys -t "$target_pane" Enter
         ;;
@@ -48,6 +65,7 @@ case "$mode" in
         # tmux-helix-xclaude: focus mode for helix hotkey
         file=$(tmux-helix-bufinfo file)
         line=$(tmux-helix-bufinfo line)
+        clear_input
         tmux send-keys -t "$target_pane" "in file $file at line $line (reread the file carefully, it may have changed): "
         tmux select-pane -t "$target_pane"
         ;;

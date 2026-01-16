@@ -1,4 +1,5 @@
 # This file ensures that the following files are not applied by chezmoi.
 
+AGENTS.md
+CLAUDE.md
 README.md
-apply

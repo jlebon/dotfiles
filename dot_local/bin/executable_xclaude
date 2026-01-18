@@ -2,14 +2,20 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
-# Run claude in an unprivileged container using the same container image in
-# which we're running. The primary use case is a pet container image you've
-# customized with various dev tools, and you want Claude to be able to use those
-# tools as well in --dangerously-skip-permissions mode. Note this runs `podman`;
-# in my case, `podman` is actually ~/.local/bin/podman and just proxies to the
-# real host podman via `host-spawn`. That wrapper is available in my dotfiles
-# repo as well, but one can probably just change the podman call at the bottom
-# to `flatpak-spawn --host`
+# Detect invocation mode based on how we were called
+case "$(basename "$0")" in
+    xoc) mode=opencode ;;
+    *)   mode=claude ;;
+esac
+
+# Run claude/opencode in an unprivileged container using the same container
+# image in which we're running. The primary use case is a pet container image
+# you've customized with various dev tools, and you want Claude/OpenCode to
+# be able to use those tools as well in --dangerously-skip-permissions mode.
+# Note this runs `podman`; in my case, `podman` is actually ~/.local/bin/podman
+# and just proxies to the real host podman via `host-spawn`. That wrapper is
+# available in my dotfiles repo as well, but one can probably just change the
+# podman call at the bottom to `flatpak-spawn --host`
 
 if [ ! -e "/run/.containerenv" ]; then
     echo "ERROR: Must be run from pet container" >&2
@@ -20,7 +26,7 @@ fi
 add_dirs=()
 add_repos=()
 extra_volumes=()
-claude_args=()
+tool_args=()
 git_mount_mode=ro
 run_bash=false
 custom_image=""
@@ -28,21 +34,21 @@ mount_gh=false
 mount_glab=false
 usage() {
     cat <<EOF
-Usage: xclaude [OPTIONS] [-- CLAUDE_ARGS...]
+Usage: $(basename "$0") [OPTIONS] [-- ARGS...]
 
-Run claude in an unprivileged container.
+Run claude/opencode in an unprivileged container.
 
 Options:
   -h            Show this help message
   --git-rw      Mount .git directory read-write (default: read-only)
-  --bash        Run bash instead of claude
+  --bash        Run bash instead of claude/opencode
   --image IMG   Use a custom container image
   --gh          Mount GitHub credentials and set GITHUB_TOKEN
   --glab        Mount GitLab CLI config
-  --add-dir DIR Add a directory to the container
+  --add-dir DIR Add a directory to the container (passes --add-dir to claude)
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
-  --            Stop parsing options; remaining args passed to claude
+  --            Stop parsing options; remaining args passed to tool
 EOF
 }
 
@@ -54,7 +60,7 @@ while [ $# -gt 0 ]; do
             ;;
         --)
             shift
-            claude_args+=("$@")
+            tool_args+=("$@")
             break
             ;;
         --git-rw)
@@ -107,24 +113,26 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         *)
-            claude_args+=("$1")
+            tool_args+=("$1")
             shift
             ;;
     esac
 done
 
 if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ]; then
-    echo "ERROR: not in a git repo; remember we relabel \$PWD!" >&2
+    echo "ERROR: not in a git repo" >&2
     exit 1
 fi
 
 # Check if there's a newer version of claude-code available
-claude_manifest=~/Code/nodejs/lib/node_modules/\@anthropic-ai/claude-code/package.json
-current_version=$(jq -r '.version' "${claude_manifest}")
-latest_version=$(curl -s https://registry.npmjs.org/@anthropic-ai/claude-code/latest | jq -r '.version')
-if [ -n "${latest_version}" ] && [ "${current_version}" != "${latest_version}" ]; then
-    echo "Updating @anthropic-ai/claude-code from ${current_version} to ${latest_version}..."
-    npm update --prefix ~/Code/nodejs -g @anthropic-ai/claude-code
+if [ "${mode}" = "claude" ]; then
+    claude_manifest=~/Code/nodejs/lib/node_modules/\@anthropic-ai/claude-code/package.json
+    current_version=$(jq -r '.version' "${claude_manifest}")
+    latest_version=$(curl -s https://registry.npmjs.org/@anthropic-ai/claude-code/latest | jq -r '.version')
+    if [ -n "${latest_version}" ] && [ "${current_version}" != "${latest_version}" ]; then
+        echo "Updating @anthropic-ai/claude-code from ${current_version} to ${latest_version}..."
+        npm update --prefix ~/Code/nodejs -g @anthropic-ai/claude-code
+    fi
 fi
 
 cd "$(realpath "${PWD}")"
@@ -137,21 +145,38 @@ fi
 
 podman_args=(
     run --rm -ti
+    --detach-keys ""
+    --privileged
+    -v /var/lib/containers
+    -v /var/tmp
     --label xclaude=1
     --env PATH
     --env HOME="${HOME}"
     --tmpfs "${HOME}"
     -v /etc/localtime:/etc/localtime:ro
     -v "${HOME}/.cache"
-    -v "${HOME}/.cargo:${HOME}/.cargo:z"
-    -v "${HOME}/.rustup:${HOME}/.rustup:ro,z"
+    -v "${HOME}/.cargo:${HOME}/.cargo"
+    -v "${HOME}/.rustup:${HOME}/.rustup:ro"
     -v "${HOME}"/Code/nodejs:"${HOME}"/Code/nodejs:O
-    -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:z
-    -v "${HOME}"/.claude.json:"${HOME}"/.claude.json:z
-    -v "${HOME}"/.claude:"${HOME}"/.claude:z
-    -v "${PWD}":"${PWD}":z
+    -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:ro
+    -v "${PWD}":"${PWD}"
     -w "${PWD}"
 )
+
+# Mode-specific mounts
+if [ "${mode}" = "claude" ]; then
+    podman_args+=(
+        -v "${HOME}"/.claude.json:"${HOME}"/.claude.json
+        -v "${HOME}"/.claude:"${HOME}"/.claude
+    )
+else
+    podman_args+=(
+        -v "${HOME}"/.opencode:"${HOME}"/.opencode
+        -v "${HOME}"/.config/opencode:"${HOME}"/.config/opencode
+        -v "${HOME}"/.local/state/opencode:"${HOME}"/.local/state/opencode
+        -v "${HOME}"/.cache/opencode:"${HOME}"/.cache/opencode
+    )
+fi
 
 if [ -e .git ]; then
     if [ -f .git ]; then
@@ -160,9 +185,9 @@ if [ -e .git ]; then
     fi
     podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:"${git_mount_mode}")
     if [ "${git_mount_mode}" = "rw" ]; then
-        podman_args+=(-v "${HOME}/.gitconfig:${HOME}/.gitconfig:ro,z")
-        podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign:${HOME}/.ssh/id_ed25519.git-sign:ro,z")
-        podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign.pub:${HOME}/.ssh/id_ed25519.git-sign.pub:ro,z")
+        podman_args+=(-v "${HOME}/.gitconfig:${HOME}/.gitconfig:ro")
+        podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign:${HOME}/.ssh/id_ed25519.git-sign:ro")
+        podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign.pub:${HOME}/.ssh/id_ed25519.git-sign.pub:ro")
         # Create a read-only backup of .git for recovery
         rm -rf .git/bak
         cp --reflink=always -a .git .git-bak-tmp
@@ -173,19 +198,32 @@ if [ -e .git ]; then
     # See `mkcachedir` for the use case for this.
     if [ -L target ]; then
         target_real=$(realpath target)
-        podman_args+=(-v "${target_real}:${target_real}:z")
+        podman_args+=(-v "${target_real}:${target_real}")
     fi
 fi
 
 for dir in "${add_dirs[@]}"; do
-    podman_args+=(-v "${dir}:${dir}:z")
-    claude_args+=(--add-dir "${dir}")
+    podman_args+=(-v "${dir}:${dir}")
+    if [ "${mode}" = "claude" ]; then
+        tool_args+=(--add-dir "${dir}")
+    fi
 done
 
 for repo in "${add_repos[@]}"; do
-    repo_path=$(codeswitch ~/Code "${repo}")
-    podman_args+=(-v "${repo_path}:${repo_path}:z")
-    claude_args+=(--add-dir "${repo_path}")
+    if [[ "${repo}" == *:rw ]]; then
+        repo_mode=rw
+        repo=${repo%:rw}
+    elif [[ "${repo}" == *:ro ]]; then
+        repo_mode=ro
+        repo=${repo%:ro}
+    else
+        repo_mode=ro
+    fi
+    repo_path=$(realpath "$(codeswitch ~/Code "${repo}")")
+    podman_args+=(-v "${repo_path}:${repo_path}:${repo_mode}")
+    if [ "${mode}" = "claude" ]; then
+        tool_args+=(--add-dir "${repo_path}")
+    fi
 done
 
 for vol in "${extra_volumes[@]}"; do
@@ -199,7 +237,7 @@ if [ "${mount_gh}" = "true" ]; then
 fi
 
 if [ "${mount_glab}" = "true" ]; then
-    podman_args+=(-v "${HOME}/.config/glab-cli/config.yml:${HOME}/.config/glab-cli/config.yml:ro,z")
+    podman_args+=(-v "${HOME}/.config/glab-cli/config.yml:${HOME}/.config/glab-cli/config.yml:ro")
 fi
 
 # add tmux info if we're running in tmux
@@ -208,16 +246,27 @@ if [ -n "${TMUX_PANE:-}" ]; then
     podman_args+=(--label TMUX_WINDOW="$(tmux display-message -p '#{window_id}')")
 fi
 
-# claude env vars
+# env vars
 # shellcheck disable=SC1090
 source ~/"Documents/Red Hat/claude-env.sh"
-podman_args+=(
-    --env CLAUDE_CODE_USE_VERTEX
-    --env CLOUD_ML_REGION
-    --env ANTHROPIC_VERTEX_PROJECT_ID
-    --env DISABLE_AUTOUPDATER=1
-)
-HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
+
+if [ "${mode}" = "claude" ]; then
+    podman_args+=(
+        --env CLAUDE_CODE_USE_VERTEX
+        --env CLOUD_ML_REGION
+        --env ANTHROPIC_VERTEX_PROJECT_ID
+        --env DISABLE_AUTOUPDATER=1
+    )
+    HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
+else
+    podman_args+=(
+        --env VERTEX_REGION
+        --env GOOGLE_CLOUD_PROJECT
+        --env OPENCODE_PERMISSION='{"external_directory":"allow"}'
+    )
+    HOST_SPAWN_ENV=VERTEX_REGION,GOOGLE_CLOUD_PROJECT,OPENCODE_PERMISSION
+fi
+
 if [ "${mount_gh}" = "true" ]; then
     HOST_SPAWN_ENV="${HOST_SPAWN_ENV},GITHUB_TOKEN"
 fi
@@ -242,16 +291,22 @@ export HOST_SPAWN_ENV
 
 # claude doesn't like running as root with --dangerously-skip-permissions
 # (there's IS_SANDBOX=1, but then you have to approve a bypass prompt)
-podman_args+=(--userns=keep-id)
+if [ "${mode}" = "claude" ]; then
+    podman_args+=(--userns=keep-id)
+fi
 
 # and the actual image and command
 podman_args+=("${imageid}")
 if [ "${run_bash}" = "true" ]; then
     exec podman "${podman_args[@]}" bash
-else
+elif [ "${mode}" = "claude" ]; then
     podman_args+=(
         "${HOME}"/Code/nodejs/bin/claude
         --dangerously-skip-permissions
     )
-    exec podman "${podman_args[@]}" "${claude_args[@]}"
+    exec podman "${podman_args[@]}" "${tool_args[@]}"
+else
+    exec podman "${podman_args[@]}" bash -c \
+        '"$HOME"/.opencode/bin/opencode upgrade; exec "$HOME"/.opencode/bin/opencode "$@"' \
+        -- "${tool_args[@]}"
 fi

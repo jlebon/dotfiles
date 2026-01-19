@@ -2,7 +2,7 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
-# Send a query to an xclaude instance running in the same tmux window.
+# Send a query to a claude/opencode instance running in the same tmux window.
 #
 # Modes based on how it's called:
 #   tmux-helix-xclaude: send file/line context, switch focus (for helix hotkey)
@@ -15,18 +15,23 @@ mode=$(basename "$0")
 
 current_window=$(tmux display-message -p '#{window_id}')
 
-# Find all xclaude containers and look for one matching our window
+# Find all claude/opencode containers and look for one matching our window
 target_pane=""
-while read -r container_id; do
-    window_label=$(podman inspect --format '{{index .Config.Labels "TMUX_WINDOW"}}' "$container_id")
-    if [ "$window_label" = "$current_window" ]; then
-        target_pane=$(podman inspect --format '{{index .Config.Labels "TMUX_PANE"}}' "$container_id")
-        break
-    fi
-done < <(podman ps --filter=label=xclaude=1 --format '{{.ID}}')
+container_type=""
+for label in claude opencode; do
+    while read -r container_id; do
+        [ -z "$container_id" ] && continue
+        window_label=$(podman inspect --format '{{index .Config.Labels "TMUX_WINDOW"}}' "$container_id")
+        if [ "$window_label" = "$current_window" ]; then
+            target_pane=$(podman inspect --format '{{index .Config.Labels "TMUX_PANE"}}' "$container_id")
+            container_type="$label"
+            break 2
+        fi
+    done < <(podman ps --filter=label="${label}=1" --format '{{.ID}}')
+done
 
 if [ -z "$target_pane" ]; then
-    echo "ERROR: No xclaude instance found for window $current_window" >&2
+    echo "ERROR: No AI assistant instance found for window $current_window" >&2
     exit 1
 fi
 
@@ -38,12 +43,19 @@ fi
 
 # Send to the xclaude pane based on mode
 clear_input() {
-    # there's Esc Esc also, but that would also stop Claude execution if it's currently working
-    for i in {1..10}; do
-        tmux send-keys -t "$target_pane" Home
-        sleep 0.01
-        tmux send-keys -t "$target_pane" C-k
-    done
+    if [ "$container_type" = "opencode" ]; then
+        # OpenCode: Shift-Home to select all, then Backspace to delete
+        tmux send-keys -t "$target_pane" S-Home
+        tmux send-keys -t "$target_pane" BSpace
+    else
+        # Claude: Home + Ctrl-K loop
+        # there's Esc Esc also, but that would also stop Claude execution if it's currently working
+        for i in {1..10}; do
+            tmux send-keys -t "$target_pane" Home
+            sleep 0.01
+            tmux send-keys -t "$target_pane" C-k
+        done
+    fi
 }
 
 case "$mode" in

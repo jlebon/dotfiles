@@ -149,7 +149,7 @@ podman_args=(
     --privileged
     -v /var/lib/containers
     -v /var/tmp
-    --label xclaude=1
+    --label "${mode}=1"
     --env PATH
     --env HOME="${HOME}"
     --tmpfs "${HOME}"
@@ -175,6 +175,7 @@ else
         -v "${HOME}"/.config/opencode:"${HOME}"/.config/opencode
         -v "${HOME}"/.local/state/opencode:"${HOME}"/.local/state/opencode
         -v "${HOME}"/.cache/opencode:"${HOME}"/.cache/opencode
+        --publish 192.168.2.1:8080:8080
     )
 fi
 

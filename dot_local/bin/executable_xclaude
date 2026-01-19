@@ -308,7 +308,14 @@ elif [ "${mode}" = "claude" ]; then
     )
     exec podman "${podman_args[@]}" "${tool_args[@]}"
 else
-    exec podman "${podman_args[@]}" bash -c \
-        '"$HOME"/.opencode/bin/opencode upgrade; exec "$HOME"/.opencode/bin/opencode "$@"' \
-        -- "${tool_args[@]}"
+    exec podman "${podman_args[@]}" bash -c '
+bin="$HOME/.opencode/bin/opencode"
+if [ -f "$bin" ]; then
+    mtime=$(stat -c %Y "$bin" 2>/dev/null || echo 0)
+    now=$(date +%s)
+    if [ $((now - mtime)) -gt 86400 ]; then
+        "$bin" upgrade && touch "$bin"
+    fi
+fi
+exec "$bin" "$@"' -- "${tool_args[@]}"
 fi

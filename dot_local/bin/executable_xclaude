@@ -32,6 +32,7 @@ run_bash=false
 custom_image=""
 mount_gh=false
 mount_glab=false
+clean_volumes=false
 usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS] [-- ARGS...]
@@ -48,6 +49,7 @@ Options:
   --add-dir DIR Add a directory to the container (passes --add-dir to claude)
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
+  --clean       Remove existing named volumes before starting
   --            Stop parsing options; remaining args passed to tool
 EOF
 }
@@ -85,6 +87,10 @@ while [ $# -gt 0 ]; do
             ;;
         --glab)
             mount_glab=true
+            shift
+            ;;
+        --clean)
+            clean_volumes=true
             shift
             ;;
         --add-dir)
@@ -137,6 +143,16 @@ fi
 
 cd "$(realpath "${PWD}")"
 
+# Generate volume prefix from working directory for named volumes
+vol_hash=$(echo "$PWD" | md5sum | cut -c1-8)
+vol_slug=$(basename "$PWD" | tr -cs 'a-zA-Z0-9' '-' | sed 's/-$//')
+vol_prefix="xclaude-${vol_hash}-${vol_slug}"
+
+# Clean up existing volumes if requested
+if [ "${clean_volumes}" = "true" ]; then
+    podman volume rm -f "${vol_prefix}-containers" "${vol_prefix}-var-tmp" "${vol_prefix}-tmp" 2>/dev/null || true
+fi
+
 if [ -n "${custom_image}" ]; then
     imageid="${custom_image}"
 else
@@ -147,8 +163,9 @@ podman_args=(
     run --rm -ti
     --detach-keys ""
     --privileged
-    -v /var/lib/containers
-    -v /var/tmp
+    -v "${vol_prefix}-containers:/var/lib/containers"
+    -v "${vol_prefix}-var-tmp:/var/tmp"
+    -v "${vol_prefix}-tmp:/tmp"
     --label "${mode}=1"
     --env PATH
     --env HOME="${HOME}"

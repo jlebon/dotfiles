@@ -173,10 +173,11 @@ else
     podman_args+=(
         -v "${HOME}"/.opencode:"${HOME}"/.opencode
         -v "${HOME}"/.config/opencode:"${HOME}"/.config/opencode
+        -v "${HOME}"/.local/share/opencode:"${HOME}"/.local/share/opencode
         -v "${HOME}"/.local/state/opencode:"${HOME}"/.local/state/opencode
         -v "${HOME}"/.cache/opencode:"${HOME}"/.cache/opencode
-        --publish 192.168.2.1:8080:8080
     )
+    # --publish 192.168.2.1:8080:8080
 fi
 
 if [ -e .git ]; then

@@ -143,6 +143,17 @@ fi
 
 cd "$(realpath "${PWD}")"
 
+# Mount target symlink if it exists in a directory. This handles the case
+# where `target/` is a symlink to an external cache directory (see `mkcachedir`).
+mount_target_symlink() {
+    local dir="$1"
+    if [ -L "${dir}/target" ]; then
+        local target_real
+        target_real=$(realpath "${dir}/target")
+        podman_args+=(-v "${target_real}:${target_real}")
+    fi
+}
+
 # Generate volume prefix from working directory for named volumes
 vol_hash=$(echo "$PWD" | md5sum | cut -c1-8)
 vol_slug=$(basename "$PWD" | tr -cs 'a-zA-Z0-9' '-' | sed 's/-$//')
@@ -213,16 +224,12 @@ if [ -e .git ]; then
         mv .git-bak-tmp .git/bak
         podman_args+=(-v "${PWD}"/.git/bak:"${PWD}"/.git/bak:ro)
     fi
-    # If there's a target/ that's a symlink, mount its target too.
-    # See `mkcachedir` for the use case for this.
-    if [ -L target ]; then
-        target_real=$(realpath target)
-        podman_args+=(-v "${target_real}:${target_real}")
-    fi
+    mount_target_symlink "${PWD}"
 fi
 
 for dir in "${add_dirs[@]}"; do
     podman_args+=(-v "${dir}:${dir}")
+    mount_target_symlink "${dir}"
     if [ "${mode}" = "claude" ]; then
         tool_args+=(--add-dir "${dir}")
     fi
@@ -240,6 +247,7 @@ for repo in "${add_repos[@]}"; do
     fi
     repo_path=$(realpath "$(codeswitch ~/Code "${repo}")")
     podman_args+=(-v "${repo_path}:${repo_path}:${repo_mode}")
+    mount_target_symlink "${repo_path}"
     if [ "${mode}" = "claude" ]; then
         tool_args+=(--add-dir "${repo_path}")
     fi

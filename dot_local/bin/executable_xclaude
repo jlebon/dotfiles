@@ -33,6 +33,7 @@ custom_image=""
 mount_gh=false
 mount_glab=false
 mount_oci_auth=false
+mount_imgs=false
 clean_volumes=false
 usage() {
     cat <<EOF
@@ -48,6 +49,7 @@ Options:
   --gh          Mount GitHub credentials and set GITHUB_TOKEN
   --glab        Mount GitLab CLI config
   --oci-auth    Mount Docker config (~/.docker/config.json)
+  --imgs        Mount /srv/imgs read-write
   --add-dir DIR Add a directory to the container (passes --add-dir to claude)
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
@@ -93,6 +95,10 @@ while [ $# -gt 0 ]; do
             ;;
         --oci-auth)
             mount_oci_auth=true
+            shift
+            ;;
+        --imgs)
+            mount_imgs=true
             shift
             ;;
         --clean)
@@ -275,6 +281,10 @@ fi
 
 if [ "${mount_oci_auth}" = "true" ]; then
     podman_args+=(-v "${HOME}/.docker/config.json:${HOME}/.docker/config.json:ro")
+fi
+
+if [ "${mount_imgs}" = "true" ]; then
+    podman_args+=(-v "/srv/imgs:/run/host/srv/imgs:rw")
 fi
 
 # add tmux info if we're running in tmux

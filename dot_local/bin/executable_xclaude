@@ -221,8 +221,8 @@ else
 fi
 
 if [ -e .git ]; then
+    primary_worktree=$(git worktree list | head -n1 | cut -f1 -d' ')
     if [ -f .git ]; then
-        primary_worktree=$(git worktree list | head -n1 | cut -f1 -d' ')
         podman_args+=(-v "${primary_worktree}:${primary_worktree}:${git_mount_mode}")
     fi
     podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:"${git_mount_mode}")
@@ -231,10 +231,11 @@ if [ -e .git ]; then
         podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign:${HOME}/.ssh/id_ed25519.git-sign:ro")
         podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign.pub:${HOME}/.ssh/id_ed25519.git-sign.pub:ro")
         # Create a read-only backup of .git for recovery
-        rm -rf .git/bak
-        cp --reflink=always -a .git .git-bak-tmp
-        mv .git-bak-tmp .git/bak
-        podman_args+=(-v "${PWD}"/.git/bak:"${PWD}"/.git/bak:ro)
+        rm -rf "${primary_worktree}"/.git/bak
+        cp --reflink=always -a "${primary_worktree}/.git" \
+            "${primary_worktree}/.git-bak-tmp"
+        mv "${primary_worktree}/.git-bak-tmp" "${primary_worktree}/.git/bak"
+        podman_args+=(-v "${primary_worktree}/.git/bak:${primary_worktree}/.git/bak:ro")
     fi
     mount_target_symlink "${PWD}"
 fi

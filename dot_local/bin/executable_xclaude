@@ -311,6 +311,7 @@ else
         --env VERTEX_REGION
         --env GOOGLE_CLOUD_PROJECT
         --env OPENCODE_PERMISSION='{"external_directory":"allow"}'
+        --env OPENCODE_EXPERIMENTAL_PLAN_MODE=true
     )
     HOST_SPAWN_ENV=VERTEX_REGION,GOOGLE_CLOUD_PROJECT,OPENCODE_PERMISSION
 fi

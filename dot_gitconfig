@@ -22,6 +22,7 @@
 	cm = "!set -e; git checkout $(git default)"
 	clip = "!f() { : git log; git log -1 --format=%B ${1:-HEAD} | wl-copy; }; f"
 	clipout = "!f() { : git log; git log -1 --format=%B ${1:-HEAD}; }; f"
+	cliptmux = "!f() { : git log; git log -1 --format=%B ${1:-HEAD} | tmux load-buffer -; }; f"
 	mfetch = "!set -e; r=$(git default -u); b=$(git default); git fetch $r $b:$b"
 	rem = "!set -e; r=$(git default -u); b=$(git default); git rebase $b -i \"$@\""
 	frem = "!set -e; git mfetch; git rem \"$@\""

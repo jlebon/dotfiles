@@ -9,7 +9,7 @@ Provision Fedora Cloud VMs for testing or running commands in an isolated enviro
 
 ## Prerequisites
 
-Requires: `qemu-system-x86_64`, `cloud-localds` (from cloud-utils), `jq`, SSH key pair.
+Requires: `qemu-system-x86_64`, `genisoimage`, `jq`, SSH key pair.
 
 ## Step-by-Step Instructions
 
@@ -46,7 +46,7 @@ touch meta-data
 ### 4. Generate Cloud-Init ISO
 
 ```bash
-cloud-localds seed.iso user-data meta-data
+genisoimage -output seed.iso -volid cidata -joliet -rock user-data meta-data
 ```
 
 ### 5. Launch VM with QEMU

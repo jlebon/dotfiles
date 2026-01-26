@@ -18,6 +18,7 @@
 	amendpipe = -c core.commentchar=| commit --amend
 	amendit = commit --amend --no-edit
 	fix = commit --amend --no-edit -a
+	signoff = "!f() { : git commit; c=${1:-HEAD}; GIT_SEQUENCE_EDITOR=\"sed -i '1s/^pick/edit/'\" git rebase -i $c^ && git commit --amend --no-edit --signoff && git rebase --continue; }; f"
 	fixup = "!f() { : git commit; git commit -a --fixup ${1:-HEAD}; }; f"
 	cm = "!set -e; git checkout $(git default)"
 	clip = "!f() { : git log; git log -1 --format=%B ${1:-HEAD} | wl-copy; }; f"

@@ -199,7 +199,7 @@ podman_args=(
     --env PATH
     --env HOME="${HOME}"
     --tmpfs "${HOME}"
-    -v /etc/localtime:/etc/localtime:ro
+    --tz local
     -v "${HOME}/.cache"
     -v "${HOME}/.cargo:${HOME}/.cargo"
     -v "${HOME}/.rustup:${HOME}/.rustup:ro"

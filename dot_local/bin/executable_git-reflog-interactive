@@ -1,0 +1,75 @@
+#!/bin/bash
+set -euo pipefail
+
+## Navigation:
+## 
+## Select up/down                   Ctrl-K, Ctrl-J
+## Scroll up/down one line          Ctrl-Y, Ctrl-E
+## Scroll commits up/down           Ctrl-U, Ctrl-D
+## Scroll preview up/down           Alt-U, Alt-D
+## Scroll preview up/down one line  Alt-Y, Alt-E
+## Clear query                      Ctrl-Space
+## Go to top                        Backspace (on empty query)
+## 
+## Git operations:
+## 
+## View commit              Enter
+## Reset to entry           Ctrl-R (with confirmation)
+## Reload reflog            Ctrl-S
+## 
+## Browser:
+## 
+## Open PR in browser      Ctrl-P
+## Open commit in browser  Ctrl-O
+## 
+## Misc:
+## 
+## Show this help                         F1
+## Change preview location                F2
+## Toggle preview                         Ctrl-/
+## Edit files in commit                   Ctrl-H
+## Copy commit hashes to tmux and stdout  Ctrl-G
+
+# Based on git-log-interactive.
+# Some explanations:
+#  - The `-d '\x00' --nth 4,6` is to only search within the reflog action and
+#    commit message fields. Fields are determined using the %x00 chars we inject.
+#  - The `[ -z {2} ] || ...` syntax is to no-op correctly if on a line with
+#    no commit info.
+
+if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" != "true" ]; then
+    echo "error: not inside a git repo" >&2
+    exit 1
+fi
+
+extra_args=()
+while [ $# -gt 0 ]; do
+    extra_args+=("$(printf '%q' "$1")")
+    shift
+done
+export FZF_DEFAULT_COMMAND="git reflog --pretty=format:'%C(yellow)%x00%h%x00 %Cred%gd %x00%Cblue%gs%Cgreen%x00 %x00%Creset%s' --color=always ${extra_args[*]}"
+
+tmux=true
+if [ -n "${TMUX:-}" ]; then
+    tmux=tmux
+fi
+
+# shellcheck disable=SC2016
+fzf --track --ansi --no-sort --reverse --tiebreak=index -m -d '\x00' --nth 4,6  \
+  --preview '[ -z {2} ] || git show --color=always {2} | delta' \
+  --bind 'f2:change-preview-window(down|right)' \
+  --bind 'ctrl-y:offset-up,ctrl-e:offset-down' \
+  --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
+  --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
+  --bind 'enter:execute([ -z {2} ] || git show --color=always {2} | delta | less -R)' \
+  --bind 'ctrl-space:clear-query' \
+  --bind 'backward-eof:first' \
+  --bind 'ctrl-h:execute([ -z {2} ] || git edit {2})' \
+  --bind 'ctrl-r:execute([ -z {2} ] || ( read -p "Reset to {2}? [y/N] " ans && [ "$ans" = "y" ] && git reset --hard {2} ))' \
+  --bind "ctrl-r:+reload:${FZF_DEFAULT_COMMAND}" \
+  --bind "ctrl-s:reload:${FZF_DEFAULT_COMMAND}" \
+  --bind "ctrl-g:become:$tmux set-buffer '{+2}' && echo {+2}" \
+  --bind 'ctrl-p:execute-silent:[ -z {2} ] || (url=$(git get-pr-for-commit {2}) && ${container:+flatpak-spawn --host} /usr/bin/xdg-open ${url})' \
+  --bind 'ctrl-o:execute-silent:[ -z {2} ] || (url=$(git commitlink {2}) && ${container:+flatpak-spawn --host} /usr/bin/xdg-open ${url})' \
+  --bind "f1:execute(grep '^## ' '$0' | cut -f2- -d' ' | less)" \
+  --bind "ctrl-/:toggle-preview"

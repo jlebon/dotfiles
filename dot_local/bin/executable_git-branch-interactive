@@ -11,7 +11,9 @@ set -euo pipefail
 ## Git operations:
 ## 
 ## Checkout branch  Enter
-## Delete branch    Ctrl-R
+## Delete branch    Ctrl-X
+## Force delete     Ctrl-F
+## Rename branch    Ctrl-R
 ## Browse branch    Ctrl-Space
 ## 
 ## Misc:
@@ -20,9 +22,6 @@ set -euo pipefail
 ## Change preview location                F2
 ## Toggle preview                         Ctrl-/
 ## Copy branch names to tmux and stdout   Ctrl-G
-
-# XXX: Ctrl-R -> rename, Ctrl-X -> delete?
-# XXX: prompt for deletion?
 
 if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" != "true" ]; then
     echo "error: not inside a git repo" >&2
@@ -48,7 +47,7 @@ elif [ "${1:-}" = preview ]; then
     merge_base=$(git merge-base "${default_ref}" "$2") # $2
     git lg --color=always "$2" "^${merge_base}"
     echo
-    printf '%.s─' $(seq 1 $COLUMNS)
+    printf '%.s─' $(seq 1 "${FZF_PREVIEW_COLUMNS:-$COLUMNS}")
     git diff --color=always "${merge_base}" "$2" 
     exit 0
 fi
@@ -62,17 +61,22 @@ if [ -n "${TMUX:-}" ]; then
 fi
 
 fzf --track --ansi --tiebreak=index -m -d '  ' \
-    --header 'Enter: checkout | C-Space: log | C-r: delete | C-f: delete -D | C-g: copy' \
+    --highlight-line --cycle \
+    --border=rounded --border-label=' Git Branches (F1: help) ' \
+    --preview-label=' Commits & Diff ' \
     --preview "$0 preview {1}" \
     --bind "f1:execute(grep '^## ' '$0' | cut -f2- -d' ' | less)" \
-    --bind 'f2:change-preview-window(down|right)' \
+    --bind 'f2:change-preview-window(down|right|hidden)' \
+    --bind 'focus:transform-preview-label:echo " {1} "' \
     --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
     --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
     --bind 'enter:become:git checkout {1}' \
     --bind 'ctrl-space:execute:git lgi {1}' \
-    --bind 'ctrl-r:execute:git branch -d {+1}' \
-    --bind "ctrl-r:+reload:${FZF_DEFAULT_COMMAND}" \
+    --bind 'ctrl-x:execute:git branch -d {+1}' \
+    --bind "ctrl-x:+reload:${FZF_DEFAULT_COMMAND}" \
     --bind 'ctrl-f:execute:git branch -D {+1}' \
     --bind "ctrl-f:+reload:${FZF_DEFAULT_COMMAND}" \
+    --bind 'ctrl-r:execute:read -p "New name for {1}: " name && git branch -m {1} "$name"' \
+    --bind "ctrl-r:+reload:${FZF_DEFAULT_COMMAND}" \
     --bind 'ctrl-/:toggle-preview' \
     --bind "ctrl-g:become:$tmux set-buffer '{+1}' && echo {+1}"

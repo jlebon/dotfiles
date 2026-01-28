@@ -55,7 +55,10 @@ if [ -n "${TMUX:-}" ]; then
 fi
 
 # shellcheck disable=SC2016
-fzf --track --ansi --no-sort --reverse --tiebreak=index -m -d '\x00' --nth 4,6  \
+fzf --track --ansi --no-sort --reverse --tiebreak=index -m -d '\x00' --nth 4,6 \
+  --highlight-line --cycle \
+  --border=rounded --border-label=' Git Reflog (F1: help) ' \
+  --preview-label=' Commit ' \
   --preview '[ -z {2} ] || git show --color=always {2} | delta' \
   --bind 'f2:change-preview-window(down|right)' \
   --bind 'ctrl-y:offset-up,ctrl-e:offset-down' \

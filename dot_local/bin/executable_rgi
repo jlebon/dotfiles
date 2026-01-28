@@ -51,10 +51,7 @@ if [ -n "${TMUX:-}" ]; then
     tmux=tmux
 fi
 
-# XXX: if COLUMNS is beneath a certain threshold, open with preview pane off
-# by default
 
-# XXX: binding for showing commit that introduced line
 
 # We use FZF_DEFAULT_COMMAND instead of piping so that the command is owned
 # and interruptable by fzf and so that stdout is still a terminal (for e.g.
@@ -66,9 +63,16 @@ fi
 export FZF_DEFAULT_COMMAND="[ ! -s $Q ] || $RG -f $Q || [ \$? = 1 ]"
 
 fzf --ansi --disabled -m -d : \
+  --scheme=path --filepath-word \
+  --highlight-line --cycle \
+  --border=rounded --border-label=' rgi (F1: help) ' \
+  --input-border=line \
+  --preview-label=' Preview ' \
+  --history="${XDG_STATE_HOME:-$HOME/.local/state}/rgi_history" \
   --bind "change:execute-silent(echo -n {q} > $Q)" --query "$q" --prompt 'regex> ' \
   --bind "change:+reload:$FZF_DEFAULT_COMMAND" \
-  --preview 'bat --plain --color always --highlight-line {2} {1}' --preview-window '+{2}/2' \
+  --preview 'bat --plain --color always --highlight-line {2} {1}' \
+  --preview-window 'right,50%,+{2}/2,<80(down,40%)' \
   --bind 'f2:change-preview-window(down|right)' \
   --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \

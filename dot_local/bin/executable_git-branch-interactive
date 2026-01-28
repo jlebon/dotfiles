@@ -53,6 +53,9 @@ elif [ "${1:-}" = preview ]; then
         echo "No common ancestry with ${default_ref}"
         echo
         git lg --color=always "$2"
+        echo
+        printf '%.s─' $(seq 1 "${FZF_PREVIEW_COLUMNS:-$COLUMNS}")
+        git diff --color=always "${default_ref}" "$2"
     fi
     exit 0
 fi

@@ -44,11 +44,16 @@ if [ "${1:-}" = command ]; then
     exit 0
 elif [ "${1:-}" = preview ]; then
     default_ref=$(git default -r)
-    merge_base=$(git merge-base "${default_ref}" "$2") # $2
-    git lg --color=always "$2" "^${merge_base}"
-    echo
-    printf '%.s─' $(seq 1 "${FZF_PREVIEW_COLUMNS:-$COLUMNS}")
-    git diff --color=always "${merge_base}" "$2" 
+    if merge_base=$(git merge-base "${default_ref}" "$2" 2>/dev/null); then
+        git lg --color=always "$2" "^${merge_base}"
+        echo
+        printf '%.s─' $(seq 1 "${FZF_PREVIEW_COLUMNS:-$COLUMNS}")
+        git diff --color=always "${merge_base}" "$2"
+    else
+        echo "No common ancestry with ${default_ref}"
+        echo
+        git lg --color=always "$2"
+    fi
     exit 0
 fi
 

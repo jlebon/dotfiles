@@ -277,7 +277,7 @@ for vol in "${extra_volumes[@]}"; do
 done
 
 if [ "${mount_gh}" = "true" ]; then
-    GITHUB_TOKEN=$(gh auth token)
+    GITHUB_TOKEN=$(secret-tool lookup github-cli-read-only token)
     export GITHUB_TOKEN
     podman_args+=(--env GITHUB_TOKEN)
 fi

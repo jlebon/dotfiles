@@ -42,7 +42,7 @@ if [ "${1:-}" = command ]; then
                 # Check git cherry first (exact patch match)
                 # If all lines start with '-', all commits have been applied upstream
                 if ! git cherry "${default_ref}" "$branch" 2>/dev/null | grep -qv '^-'; then
-                    marker="✓"
+                    marker="🍒"
                 else
                     # Fall back to title matching (for squash merges)
                     all_merged=true
@@ -52,8 +52,11 @@ if [ "${1:-}" = command ]; then
                             break
                         fi
                     done < <(git log --format='%s' "${merge_base}..${branch}")
-                    [ "$all_merged" = true ] && marker="~"
+                    [ "$all_merged" = true ] && marker="🔀"
                 fi
+            else
+                # Branch has no unique commits - truly merged
+                marker="✅"
             fi
         fi
         

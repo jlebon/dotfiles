@@ -31,38 +31,65 @@ fi
 if [ "${1:-}" = command ]; then
     default_local=$(git default -l)
     default_ref=$(git default -r)
+    default_sha=$(git rev-parse "${default_ref}")
+    
+    # Load cache (only entries matching current default_sha)
+    cache_file="$(git rev-parse --git-dir)/branch-interactive-cache"
+    declare -A cache
+    if [ -f "$cache_file" ]; then
+        while IFS=$'\t' read -r b_sha d_sha marker; do
+            [ "$d_sha" = "$default_sha" ] && cache["$b_sha"]="$marker"
+        done < "$cache_file"
+    fi
     
     while IFS= read -r branch; do
         [ "$branch" = "$default_local" ] && continue
         
-        marker=""
-        if merge_base=$(git merge-base "${default_ref}" "$branch" 2>/dev/null); then
-            # Check if there are any commits on the branch
-            if [ "$(git rev-list --count "${merge_base}..${branch}")" -gt 0 ]; then
-                # Check git cherry first (exact patch match)
-                # If all lines start with '-', all commits have been applied upstream
-                if ! git cherry "${default_ref}" "$branch" 2>/dev/null | grep -qv '^-'; then
-                    marker="🍒"
+        branch_sha=$(git rev-parse "$branch")
+        
+        # Check cache first
+        if [ -n "${cache[$branch_sha]+x}" ]; then
+            marker="${cache[$branch_sha]}"
+        else
+            # Compute marker
+            marker=""
+            if merge_base=$(git merge-base "${default_ref}" "$branch" 2>/dev/null); then
+                # Check if there are any commits on the branch
+                if [ "$(git rev-list --count "${merge_base}..${branch}")" -gt 0 ]; then
+                    # Check git cherry first (exact patch match)
+                    # If all lines start with '-', all commits have been applied upstream
+                    if ! git cherry "${default_ref}" "$branch" 2>/dev/null | grep -qv '^-'; then
+                        marker="🍒"
+                    else
+                        # Fall back to title matching (for squash merges)
+                        all_merged=true
+                        while IFS= read -r title; do
+                            if ! git log --format='%s' "${merge_base}..${default_ref}" | grep -qxF "$title"; then
+                                all_merged=false
+                                break
+                            fi
+                        done < <(git log --format='%s' "${merge_base}..${branch}")
+                        [ "$all_merged" = true ] && marker="🔀"
+                    fi
                 else
-                    # Fall back to title matching (for squash merges)
-                    all_merged=true
-                    while IFS= read -r title; do
-                        if ! git log --format='%s' "${merge_base}..${default_ref}" | grep -qxF "$title"; then
-                            all_merged=false
-                            break
-                        fi
-                    done < <(git log --format='%s' "${merge_base}..${branch}")
-                    [ "$all_merged" = true ] && marker="🔀"
+                    # Branch has no unique commits - truly merged
+                    marker="✅"
                 fi
-            else
-                # Branch has no unique commits - truly merged
-                marker="✅"
             fi
+            cache["$branch_sha"]="$marker"
         fi
         
         # Always use tab delimiter for consistent fzf field parsing
         printf '%s\t%s\n' "$branch" "$marker"
     done < <(git branch -v --sort=-committerdate --format "%(refname:lstrip=2)")
+    
+    # Write cache atomically
+    {
+        for b_sha in "${!cache[@]}"; do
+            printf '%s\t%s\t%s\n' "$b_sha" "$default_sha" "${cache[$b_sha]}"
+        done
+    } > "${cache_file}.tmp" && mv "${cache_file}.tmp" "$cache_file"
+    
     exit 0
 elif [ "${1:-}" = preview ]; then
     default_ref=$(git default -r)

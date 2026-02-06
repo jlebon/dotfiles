@@ -21,6 +21,7 @@ set -euo pipefail
 ## Show this help                         F1
 ## Change preview location                F2
 ## Toggle preview                         Ctrl-/
+## Toggle merged-only filter              Ctrl-O
 ## Copy branch names to tmux and stdout   Ctrl-G
 
 if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" != "true" ]; then
@@ -91,6 +92,10 @@ if [ "${1:-}" = command ]; then
     } > "${cache_file}.tmp" && mv "${cache_file}.tmp" "$cache_file"
     
     exit 0
+elif [ "${1:-}" = command-merged ]; then
+    # Show only merged branches (those with markers)
+    "$0" command | grep $'\t'
+    exit 0
 elif [ "${1:-}" = preview ]; then
     default_ref=$(git default -r)
     if merge_base=$(git merge-base "${default_ref}" "$2" 2>/dev/null); then
@@ -129,11 +134,10 @@ fzf --track --ansi --tiebreak=index -m -d $'\t' \
     --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
     --bind 'enter:become:git checkout {1}' \
     --bind 'ctrl-space:execute:git lgi {1}' \
-    --bind 'ctrl-x:execute:git branch -d {+1}' \
-    --bind "ctrl-x:+reload:${FZF_DEFAULT_COMMAND}" \
-    --bind 'ctrl-f:execute:git branch -D {+1}' \
-    --bind "ctrl-f:+reload:${FZF_DEFAULT_COMMAND}" \
+    --bind "ctrl-o:transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command)+change-border-label( Git Branches (F1: help) )' || echo 'reload($0 command-merged)+change-border-label( Merged Branches (F1: help) )'" \
+    --bind "ctrl-x:execute-silent(git branch -d {+1})+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command-merged)+pos({n})' || echo 'reload($0 command)+pos({n})'" \
+    --bind "ctrl-f:execute-silent(git branch -D {+1})+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command-merged)+pos({n})' || echo 'reload($0 command)+pos({n})'" \
     --bind 'ctrl-r:execute:read -p "New name for {1}: " name && git branch -m {1} "$name"' \
-    --bind "ctrl-r:+reload:${FZF_DEFAULT_COMMAND}" \
+    --bind "ctrl-r:+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command-merged)' || echo 'reload($0 command)'" \
     --bind 'ctrl-/:toggle-preview' \
     --bind "ctrl-g:become:$tmux set-buffer '{+1}' && echo {+1}"

@@ -292,6 +292,21 @@ if [ -n "${TMUX_PANE:-}" ]; then
     podman_args+=(--label TMUX_WINDOW="$(tmux display-message -p '#{window_id}')")
 fi
 
+# start hostexec so the agent can request host command execution
+hostd_pid=""
+if [ -n "${TMUX_PANE:-}" ]; then
+    hostd_sock_file=$(mktemp)
+    setpriv --pdeathsig TERM hostexec serve --write-socket-path-to "${hostd_sock_file}" &
+    hostd_pid=$!
+    # wait for the socket path to be written
+    while [ ! -s "${hostd_sock_file}" ]; do sleep 0.1; done
+    hostd_sock=$(cat "${hostd_sock_file}")
+    hostd_sock_dir=$(dirname "${hostd_sock}")
+    podman_args+=(-v "${hostd_sock_dir}:${hostd_sock_dir}")
+    podman_args+=(-v "$(command -v hostexec):/usr/local/bin/hostexec:ro")
+    podman_args+=(--env HOSTEXEC_SOCKET="${hostd_sock}")
+fi
+
 # env vars
 # shellcheck disable=SC1090
 source ~/"Documents/Red Hat/claude-env.sh"
@@ -340,18 +355,28 @@ if [ "${mode}" = "claude" ]; then
     podman_args+=(--userns=keep-id)
 fi
 
+# clean up hostexec on exit
+cleanup() {
+    if [ -n "${hostd_pid}" ]; then
+        kill "${hostd_pid}" 2>/dev/null
+        wait "${hostd_pid}" 2>/dev/null
+        rm -f "${hostd_sock_file}"
+    fi
+}
+trap cleanup EXIT
+
 # and the actual image and command
 podman_args+=("${imageid}")
 if [ "${run_bash}" = "true" ]; then
-    exec podman "${podman_args[@]}" bash
+    podman "${podman_args[@]}" bash
 elif [ "${mode}" = "claude" ]; then
     podman_args+=(
         "${HOME}"/Code/nodejs/bin/claude
         --dangerously-skip-permissions
     )
-    exec podman "${podman_args[@]}" "${tool_args[@]}"
+    podman "${podman_args[@]}" "${tool_args[@]}"
 else
-    exec podman "${podman_args[@]}" bash -c '
+    podman "${podman_args[@]}" bash -c '
 force_update="$1"; shift
 bin="$HOME/.opencode/bin/opencode"
 if [ -f "$bin" ]; then

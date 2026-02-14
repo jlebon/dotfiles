@@ -32,7 +32,9 @@ run_bash=false
 custom_image=""
 mount_glab=false
 mount_oci_auth=false
+mount_kube=false
 mount_imgs=false
+host_cgroupns=false
 clean_volumes=false
 force_update=false
 usage() {
@@ -48,7 +50,9 @@ Options:
   --image IMG   Use a custom container image
   --glab        Mount GitLab CLI config
   --oci-auth    Mount Docker config (~/.docker/config.json)
+  --kube        Mount Kubernetes config (~/.kube/config)
   --imgs        Mount /srv/imgs read-write
+  --host-cgroupns Use host cgroup namespace
   --add-dir DIR Add a directory to the container (passes --add-dir to claude)
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
@@ -93,8 +97,16 @@ while [ $# -gt 0 ]; do
             mount_oci_auth=true
             shift
             ;;
+        --kube)
+            mount_kube=true
+            shift
+            ;;
         --imgs)
             mount_imgs=true
+            shift
+            ;;
+        --host-cgroupns)
+            host_cgroupns=true
             shift
             ;;
         --clean)
@@ -282,8 +294,16 @@ if [ "${mount_oci_auth}" = "true" ]; then
     podman_args+=(-v "${HOME}/.docker/config.json:${HOME}/.docker/config.json:ro")
 fi
 
+if [ "${mount_kube}" = "true" ]; then
+    podman_args+=(-v "${HOME}/.kube/config:${HOME}/.kube/config:ro")
+fi
+
 if [ "${mount_imgs}" = "true" ]; then
     podman_args+=(-v "/srv/imgs:/run/host/srv/imgs:rw")
+fi
+
+if [ "${host_cgroupns}" = "true" ]; then
+    podman_args+=(--cgroupns=host)
 fi
 
 # add tmux info if we're running in tmux

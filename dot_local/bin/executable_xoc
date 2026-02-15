@@ -35,6 +35,7 @@ mount_oci_auth=false
 mount_kube=false
 mount_imgs=false
 host_cgroupns=false
+net_mode=""
 clean_volumes=false
 force_update=false
 usage() {
@@ -53,6 +54,7 @@ Options:
   --kube        Mount Kubernetes config (~/.kube/config)
   --imgs        Mount /srv/imgs read-write
   --host-cgroupns Use host cgroup namespace
+  --net MODE    Set network mode (passed to podman --net)
   --add-dir DIR Add a directory to the container (passes --add-dir to claude)
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
@@ -108,6 +110,14 @@ while [ $# -gt 0 ]; do
         --host-cgroupns)
             host_cgroupns=true
             shift
+            ;;
+        --net)
+            if [ -z "${2:-}" ]; then
+                echo "ERROR: --net requires a mode argument" >&2
+                exit 1
+            fi
+            net_mode="$2"
+            shift 2
             ;;
         --clean)
             clean_volumes=true
@@ -305,6 +315,10 @@ fi
 
 if [ "${host_cgroupns}" = "true" ]; then
     podman_args+=(--cgroupns=host)
+fi
+
+if [ -n "${net_mode}" ]; then
+    podman_args+=(--net="${net_mode}")
 fi
 
 # add tmux info if we're running in tmux

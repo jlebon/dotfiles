@@ -198,6 +198,7 @@ podman_args=(
     run --rm -ti
     --detach-keys ""
     --privileged
+    --init
     -v "${vol_prefix}-containers:/var/lib/containers"
     -v "${vol_prefix}-var-tmp:/var/tmp"
     -v "${vol_prefix}-tmp:/tmp"

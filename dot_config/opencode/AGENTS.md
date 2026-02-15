@@ -1,3 +1,5 @@
+- You are running in a container. Things may sometimes disappear or appear
+  whenever I restart the container.
 - Git repos for all codebases are under ~/Code.
 - When working in a git repo, if the .git repo is not read-only, you SHOULD
   create a git commit using `git commit -am` (NOT -A).

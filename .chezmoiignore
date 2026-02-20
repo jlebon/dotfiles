@@ -1,5 +1,6 @@
 # This file ensures that the following files are not applied by chezmoi.
 
+.gitignore
 AGENTS.md
 CLAUDE.md
 README.md

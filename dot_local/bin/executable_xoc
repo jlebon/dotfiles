@@ -33,7 +33,6 @@ custom_image=""
 mount_glab=false
 mount_oci_auth=false
 mount_kube=false
-mount_imgs=false
 host_cgroupns=false
 net_mode=""
 clean_volumes=false
@@ -52,7 +51,6 @@ Options:
   --glab        Mount GitLab CLI config
   --oci-auth    Mount Docker config (~/.docker/config.json)
   --kube        Mount Kubernetes config (~/.kube/config)
-  --imgs        Mount /srv/imgs read-write
   --host-cgroupns Use host cgroup namespace
   --net MODE    Set network mode (passed to podman --net)
   --add-dir DIR Add a directory to the container (passes --add-dir to claude)
@@ -101,10 +99,6 @@ while [ $# -gt 0 ]; do
             ;;
         --kube)
             mount_kube=true
-            shift
-            ;;
-        --imgs)
-            mount_imgs=true
             shift
             ;;
         --host-cgroupns)
@@ -309,9 +303,7 @@ if [ "${mount_kube}" = "true" ]; then
     podman_args+=(-v "${HOME}/.kube/config:${HOME}/.kube/config:ro")
 fi
 
-if [ "${mount_imgs}" = "true" ]; then
-    podman_args+=(-v "/srv/imgs:/run/host/srv/imgs:rw")
-fi
+podman_args+=(-v "/srv/imgs:/run/host/srv/imgs:rw")
 
 if [ "${host_cgroupns}" = "true" ]; then
     podman_args+=(--cgroupns=host)

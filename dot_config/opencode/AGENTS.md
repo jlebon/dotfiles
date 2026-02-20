@@ -12,7 +12,7 @@
   - Public functions MUST be first (ordered by data flow lifecycle: constructions, core operations, cleanup)
   - Private functions MUST be in depth-first order of their first call from public functions
 - You MUST use the gh tool to interact with GitHub. You MUST NOT use WebFetch.
-- You MUST use the glab tool to interact with GitLab. You MUST NOT use WebFetch.
+- You MUST use the glab tool to interact with gitlab.com. You MUST NOT use WebFetch.
 - If you want to run something on the host or in the host context, use
   `hostexec run <command> [args...]`. This will prompt the user for approval.
 - For read-write `gh` operations (e.g. creating PRs, merging, commenting), run

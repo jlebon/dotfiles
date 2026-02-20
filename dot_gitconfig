@@ -79,6 +79,9 @@
 	wp = worktree prune
 	wn = "!f() { rm -rf worktrees; git worktree prune; }; f"
 	wr = worktree remove
+	# super aggressive gc; useful when you just accidentally committed large
+	# objects, but nukes the reflog
+	xgc = "!git reflog expire --expire=now --all && git gc --prune=now --aggressive"
 
 	# Difftastic aliases, so `git dlog` is `git log` with difftastic and so on.
 	# dlog = -c diff.external=difft log --ext-diff

@@ -1,0 +1,11 @@
+[Unit]
+Description=jrnl Auto Clipper
+
+[Service]
+Type=simple
+ExecStart=/home/jlebon/.local/bin/jrnl-auto-clipper
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

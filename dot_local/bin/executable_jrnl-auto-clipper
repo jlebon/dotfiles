@@ -1,23 +1,81 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env python3
+"""Listen for clipboard changes via D-Bus and run jrnl-clipper."""
 
-if [ ! -f /run/.containerenv ]; then
-    while ! podman ps --format "{{.Names}}: {{.State}}" | grep -q '^pet: running$'; do
-        sleep 5
-    done
+import logging
+import subprocess
+import sys
+import time
 
-    while ! podman exec pet true; do
-        sleep 5
-    done
+import gi
 
-    exec podman exec -u jlebon pet "$0" "$@"
-fi
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio, GLib  # noqa: E402
 
-current=$(wl-paste)
-while inotifywait -e modify ~/.cache/clipboard-history@alexsaveau.dev/database.log; do
-    new=$(wl-paste)
-    if [[ "$new" != "$current" ]]; then
-        /home/jlebon/.local/bin/jrnl-clipper --clipboard --notify --ignore-invalid
-    fi
-    current="$new"
-done
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)-7s %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("jrnl-auto-clipper")
+
+JRNL_CLIPPER = "/home/jlebon/.local/bin/jrnl-clipper"
+
+
+def wait_for_container():
+    """Wait for the pet container to be running and responsive."""
+    log.info("Waiting for pet container to be running...")
+    while True:
+        result = subprocess.run(
+            ["podman", "ps", "--format", "{{.Names}}: {{.State}}"],
+            capture_output=True, text=True,
+        )
+        if "pet: running" in result.stdout:
+            break
+        time.sleep(5)
+
+    log.info("Container is running, waiting for it to be responsive...")
+    while subprocess.run(
+        ["podman", "exec", "pet", "true"],
+        capture_output=True,
+    ).returncode != 0:
+        time.sleep(5)
+
+    log.info("Container is ready")
+
+
+def on_changed(_connection, _sender, _path, _iface, _signal, params):
+    sel_type, text = params.unpack()
+    if sel_type != "clipboard":
+        log.debug("Ignoring %s selection change", sel_type)
+        return
+    log.info("Clipboard changed, running jrnl-clipper")
+    result = subprocess.run(
+        ["podman", "exec", "-i", "-u", "jlebon", "pet",
+         JRNL_CLIPPER, "--stdin", "--notify", "--ignore-invalid"],
+        input=text, text=True,
+    )
+    if result.returncode != 0:
+        log.warning("jrnl-clipper exited with code %d", result.returncode)
+
+
+def main():
+    wait_for_container()
+
+    log.info("Subscribing to D-Bus signal dev.local.ClipboardSignaler.Changed")
+    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    bus.signal_subscribe(
+        "dev.local.ClipboardSignaler",
+        "dev.local.ClipboardSignaler",
+        "Changed",
+        "/dev/local/ClipboardSignaler",
+        None,
+        Gio.DBusSignalFlags.NONE,  # pylint: disable=no-member
+        on_changed,
+    )
+
+    log.info("Listening for clipboard changes...")
+    GLib.MainLoop().run()
+
+
+if __name__ == "__main__":
+    main()

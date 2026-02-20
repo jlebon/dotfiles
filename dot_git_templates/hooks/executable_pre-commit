@@ -23,3 +23,31 @@ fi
 # index file to make sure git commands in this hook see the actual stage
 # changes. Unsetting it means we use the actual index that was in place prior to
 # committing.
+
+# Check that all objects to be committed are under 10 MB
+max_bytes=$((10 * 1024 * 1024))
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    against=HEAD
+else
+    against=$(git hash-object -t tree /dev/null)
+fi
+
+too_large=()
+while IFS=$'\t' read -r info path; do
+    new_hash=$(echo "$info" | awk '{print $4}')
+    size=$(git cat-file -s "$new_hash")
+    if [ "$size" -gt "$max_bytes" ]; then
+        too_large+=("${path} ($(numfmt --to=iec "$size"))")
+    fi
+done < <(git diff-index --cached --diff-filter=d "$against")
+
+if [ ${#too_large[@]} -gt 0 ]; then
+    echo "Aborting; the following objects exceed 10 MB:"
+    for entry in "${too_large[@]}"; do
+        echo "  $entry"
+    done
+    echo "Note: the objects are already stored in .git; to remove them, unstage"
+    echo "the files and run 'git gc --prune=now'."
+    echo "Use 'git commit -n' to disable this safety check."
+    exit 1
+fi

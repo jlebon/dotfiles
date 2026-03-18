@@ -135,8 +135,8 @@ fzf --track --ansi --tiebreak=index -m -d $'\t' \
     --bind 'enter:become:git checkout {1}' \
     --bind 'ctrl-space:execute:git lgi {1}' \
     --bind "ctrl-o:transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command)+change-border-label( Git Branches (F1: help) )' || echo 'reload($0 command-merged)+change-border-label( Merged Branches (F1: help) )'" \
-    --bind "ctrl-x:execute-silent(git branch -d {+1})+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command-merged)+pos({n})' || echo 'reload($0 command)+pos({n})'" \
-    --bind "ctrl-f:execute-silent(git branch -D {+1})+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command-merged)+pos({n})' || echo 'reload($0 command)+pos({n})'" \
+    --bind "ctrl-x:execute-silent(git branch -d {+1})+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo \"reload($0 command-merged)+pos(\$(({n}+1)))\" || echo \"reload($0 command)+pos(\$(({n}+1)))\"" \
+    --bind "ctrl-f:execute-silent(git branch -D {+1})+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo \"reload($0 command-merged)+pos(\$(({n}+1)))\" || echo \"reload($0 command)+pos(\$(({n}+1)))\"" \
     --bind 'ctrl-r:execute:read -p "New name for {1}: " name && git branch -m {1} "$name"' \
     --bind "ctrl-r:+transform:[[ \$FZF_BORDER_LABEL == *Merged* ]] && echo 'reload($0 command-merged)' || echo 'reload($0 command)'" \
     --bind 'ctrl-/:toggle-preview' \

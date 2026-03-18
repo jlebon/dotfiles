@@ -1,0 +1,20 @@
+[dirs]
+_ = ["codeswitch", "~/Code"]
+
+[volumes]
+# Always enabled
+nodejs = "~/Code/nodejs:~/Code/nodejs:O"
+gcloud = "~/.config/gcloud:~/.config/gcloud:ro"
+imgs = "/srv/imgs:/run/host/srv/imgs:rw"
+
+# On-demand (enable with -v @name)
+glab = { value = "~/.config/glab-cli/config.yml:~/.config/glab-cli/config.yml:ro", enabled = false }
+oci-auth = { value = "~/.docker/config.json:~/.docker/config.json:ro", enabled = false }
+kube = { value = "~/.kube/config:~/.kube/config:ro", enabled = false }
+
+[env]
+VERTEX_REGION = "us-east5"
+GOOGLE_CLOUD_PROJECT = "jlebon"
+OPENCODE_PERMISSION = '{"external_directory":"allow"}'
+OPENCODE_EXPERIMENTAL_PLAN_MODE = "true"
+GITHUB_TOKEN = { type = "secret-tool", attribute = "github-cli-read-only", value = "token" }

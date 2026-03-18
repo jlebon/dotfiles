@@ -204,9 +204,14 @@ else
     imageid=$(source /run/.containerenv; echo "${imageid}")
 fi
 
+# Use -t only when stdin is a TTY; omit it when piped (e.g. ralph loop)
 podman_args=(
-    run --rm -ti
-    --detach-keys ""
+    run --rm -i
+)
+if [ -t 0 ]; then
+    podman_args+=(-t --detach-keys "")
+fi
+podman_args+=(
     --privileged
     --init
     -v "${vol_prefix}-containers:/var/lib/containers"

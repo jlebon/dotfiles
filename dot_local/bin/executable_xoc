@@ -276,6 +276,7 @@ for dir in "${add_dirs[@]}"; do
     fi
 done
 
+resolved_repos=()
 for repo in "${add_repos[@]}"; do
     if [[ "${repo}" == *:rw ]]; then
         repo_mode=rw
@@ -287,6 +288,7 @@ for repo in "${add_repos[@]}"; do
         repo_mode=ro
     fi
     repo_path=$(realpath "$(codeswitch ~/Code "${repo}")")
+    resolved_repos+=("${repo_path}")
     podman_args+=(-v "${repo_path}:${repo_path}:${repo_mode}")
     mount_target_symlink "${repo_path}"
     if [ "${mode}" = "claude" ]; then
@@ -358,11 +360,35 @@ if [ "${mode}" = "claude" ]; then
     )
     HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
 else
+    # Build runtime context instructions for OpenCode
+    context="# Runtime Context\n"
+    if [ "${git_mount_mode}" = "rw" ]; then
+        context+="- You have read-write access to the git repo.\n"
+    else
+        context+="- You have read-only access to the git repo. The .git directory is mounted read-only.\n"
+    fi
+    if [ ${#resolved_repos[@]} -gt 0 ]; then
+        context+="- You have access to the following additional git repos:\n"
+        for path in "${resolved_repos[@]}"; do
+            context+="  - ${path}\n"
+        done
+    fi
+    if [ ${#add_dirs[@]} -gt 0 ]; then
+        context+="- You have access to the following additional directories:\n"
+        for dir in "${add_dirs[@]}"; do
+            context+="  - ${dir}\n"
+        done
+    fi
+    context_file=$(mktemp -p "${XDG_RUNTIME_DIR}")
+    echo -e "${context}" > "${context_file}"
+
     podman_args+=(
         --env VERTEX_REGION
         --env GOOGLE_CLOUD_PROJECT
         --env OPENCODE_PERMISSION='{"external_directory":"allow"}'
         --env OPENCODE_EXPERIMENTAL_PLAN_MODE=true
+        -v "${context_file}:/run/opencode-context.md:ro"
+        --env OPENCODE_CONFIG_CONTENT='{"instructions":["/run/opencode-context.md"]}'
     )
     HOST_SPAWN_ENV=VERTEX_REGION,GOOGLE_CLOUD_PROJECT,OPENCODE_PERMISSION
 fi
@@ -400,6 +426,7 @@ cleanup() {
         wait "${hostd_pid}" 2>/dev/null
         rm -f "${hostd_sock_file}"
     fi
+    rm -f "${context_file:-}"
 }
 trap cleanup EXIT
 

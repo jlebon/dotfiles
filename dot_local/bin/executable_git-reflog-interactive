@@ -14,6 +14,7 @@ set -euo pipefail
 ## Git operations:
 ## 
 ## View commit              Enter
+## Browse commit log        Ctrl-L
 ## Reset to entry           Ctrl-R (with confirmation)
 ## Reload reflog            Ctrl-S
 ## 
@@ -42,6 +43,24 @@ if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" != "true" ]; then
     exit 1
 fi
 
+if [ "${1:-}" = preview ]; then
+    commit="$2"
+    default_ref=$(git default -r)
+    if merge_base=$(git merge-base "${default_ref}" "${commit}" 2>/dev/null); then
+        n_commits=$(git rev-list --count "${merge_base}..${commit}")
+        if [ "${n_commits}" -gt 0 ]; then
+            echo "Commits not in ${default_ref} (${n_commits}):"
+            echo
+            git lg --color=always "${commit}" "^${merge_base}"
+            echo
+            printf '%.s─' $(seq 1 "${FZF_PREVIEW_COLUMNS:-$COLUMNS}")
+            echo
+        fi
+    fi
+    git show --color=always "${commit}" | delta
+    exit 0
+fi
+
 extra_args=()
 while [ $# -gt 0 ]; do
     extra_args+=("$(printf '%q' "$1")")
@@ -59,12 +78,13 @@ fzf --track --ansi --no-sort --reverse --tiebreak=index -m -d '\x00' --nth 4,6 \
   --highlight-line --cycle \
   --border=rounded --border-label=' Git Reflog (F1: help) ' \
   --preview-label=' Commit ' \
-  --preview '[ -z {2} ] || git show --color=always {2} | delta' \
+  --preview "[ -z {2} ] || $0 preview {2}" \
   --bind 'f2:change-preview-window(down|right)' \
   --bind 'ctrl-y:offset-up,ctrl-e:offset-down' \
   --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
   --bind 'enter:execute([ -z {2} ] || git show --color=always {2} | delta | less -R)' \
+  --bind 'ctrl-l:execute([ -z {2} ] || git lgi {2})' \
   --bind 'ctrl-space:clear-query' \
   --bind 'backward-eof:first' \
   --bind 'ctrl-h:execute([ -z {2} ] || git edit {2})' \

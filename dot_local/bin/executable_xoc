@@ -37,6 +37,7 @@ host_cgroupns=false
 net_mode=""
 clean_volumes=false
 force_update=false
+allow_no_git=false
 usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS] [-- ARGS...]
@@ -57,6 +58,7 @@ Options:
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
   --clean       Remove existing named volumes before starting
+  --allow-no-git Allow starting in a directory that is not a git repo
   --update      Force an opencode update (opencode mode only)
   --            Stop parsing options; remaining args passed to tool
 EOF
@@ -113,6 +115,10 @@ while [ $# -gt 0 ]; do
             net_mode="$2"
             shift 2
             ;;
+        --allow-no-git)
+            allow_no_git=true
+            shift
+            ;;
         --clean)
             clean_volumes=true
             shift
@@ -153,7 +159,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ]; then
+if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ] && [ "${allow_no_git}" != "true" ]; then
     echo "ERROR: not in a git repo" >&2
     exit 1
 fi

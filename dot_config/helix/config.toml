@@ -32,6 +32,7 @@ hidden = false
 
 [editor.lsp]
 display-inlay-hints = true
+auto-document-highlight = true
 
 # [editor.jump-mode]
 # num-chars-before-label = 2

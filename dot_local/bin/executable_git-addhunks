@@ -1,0 +1,351 @@
+#!/usr/bin/python3
+
+'''
+Stage specific changes from `git diff` output by line number.
+
+Run `git diff` and note the output line numbers of the changes you want to
+stage, then run `git addhunks <line_numbers...>` to stage only those changes.
+
+Line numbers on +/- lines select the contiguous change group they belong to.
+Line numbers on context lines or hunk headers select the entire hunk.
+Line numbers on file headers select all hunks for that file.
+'''
+
+import argparse
+import re
+import subprocess
+import sys
+
+
+def main():
+    args = parse_args()
+    diff_output = get_diff(args.files)
+    if not diff_output:
+        fatal("no unstaged changes")
+    file_diffs = parse_diff(diff_output)
+    selections = resolve_line_numbers(args.line_numbers, file_diffs)
+    patch = reconstruct_patch(selections)
+    if args.dry_run:
+        print(patch, end='')
+        return
+    apply_patch(patch)
+
+
+def parse_args():
+    # We need to handle `--` manually to separate our line numbers from file
+    # path arguments passed through to `git diff`.
+    argv = sys.argv[1:]
+    files = []
+    if '--' in argv:
+        idx = argv.index('--')
+        files = argv[idx + 1:]
+        argv = argv[:idx]
+
+    parser = argparse.ArgumentParser(
+        prog="git addhunks",
+        description="Stage specific changes by line number in `git diff` output."
+    )
+    parser.add_argument('line_numbers', metavar='LINE', type=int, nargs='+',
+                        help="Line numbers in `git diff` output to stage")
+    parser.add_argument('-n', '--dry-run', action='store_true',
+                        help="Print the patch that would be applied, "
+                             "without staging")
+    args = parser.parse_args(argv)
+    args.files = files
+    return args
+
+
+def get_diff(files):
+    cmd = ['git', 'diff', '--no-color']
+    if files:
+        cmd += ['--'] + files
+    return subprocess.check_output(cmd, encoding='utf-8')
+
+
+def parse_diff(diff_output):
+    '''Parse unified diff output into a list of FileDiff objects.
+
+    Each FileDiff contains the file-level headers and a list of Hunk objects.
+    Every line is tagged with its 1-based line number in the original output.
+    '''
+    lines = diff_output.splitlines(keepends=True)
+    file_diffs = []
+    current_file = None
+    current_hunk = None
+
+    for i, line in enumerate(lines):
+        line_num = i + 1  # 1-based
+
+        if line.startswith('diff --git '):
+            _flush_hunk(current_file, current_hunk)
+            current_hunk = None
+            current_file = FileDiff(start_line=line_num)
+            current_file.headers.append(line)
+            file_diffs.append(current_file)
+        elif current_file is None:
+            continue
+        elif line.startswith('Binary files '):
+            current_file.headers.append(line)
+        elif line.startswith('@@ '):
+            _flush_hunk(current_file, current_hunk)
+            current_hunk = Hunk(start_line=line_num)
+            current_hunk.lines.append(line)
+        elif current_hunk is not None:
+            current_hunk.lines.append(line)
+        else:
+            # File-level headers (index, mode, ---, +++, rename, etc.)
+            current_file.headers.append(line)
+
+    _flush_hunk(current_file, current_hunk)
+    return file_diffs
+
+
+def resolve_line_numbers(line_numbers, file_diffs):
+    '''Map line numbers to selected change groups within hunks.
+
+    Returns a list of (FileDiff, [(Hunk, selected_change_lines)]) tuples.
+    selected_change_lines is a set of output line numbers of +/- lines to
+    stage. Pointing at a context line or hunk header selects the entire hunk.
+    Pointing at a file header selects all hunks for that file.
+    '''
+    max_line = _get_max_line(file_diffs)
+    # file_idx -> hunk_idx -> set of selected change line numbers
+    sel = {}
+
+    for ln in line_numbers:
+        if ln < 1 or ln > max_line:
+            fatal(f"line {ln} is out of range (diff has {max_line} lines)")
+
+        found = False
+        for fi, fd in enumerate(file_diffs):
+            # File header region -> select all hunks
+            if fd.start_line <= ln < _file_hunks_start(fd):
+                if not fd.hunks:
+                    fatal(f"line {ln} is on a binary file entry with no hunks")
+                for hi, hunk in enumerate(fd.hunks):
+                    sel.setdefault(fi, {}).setdefault(hi, set()).update(
+                        _all_change_lines(hunk))
+                found = True
+                break
+
+            # Within a hunk
+            for hi, hunk in enumerate(fd.hunks):
+                end_line = hunk.start_line + len(hunk.lines) - 1
+                if hunk.start_line <= ln <= end_line:
+                    body_offset = ln - hunk.start_line
+                    if body_offset >= 1 and _is_change_line(
+                            hunk.lines[body_offset]):
+                        # On a +/- line -> select its change group
+                        changes = _find_change_group(hunk, ln)
+                    else:
+                        # On @@ header or context line -> select whole hunk
+                        changes = _all_change_lines(hunk)
+                    sel.setdefault(fi, {}).setdefault(hi, set()).update(
+                        changes)
+                    found = True
+                    break
+            if found:
+                break
+
+        if not found:
+            fatal(f"line {ln} does not fall within any hunk; "
+                  "has the working tree changed since you ran `git diff`?")
+
+    # Build result in diff order
+    result = []
+    for fi in sorted(sel):
+        fd = file_diffs[fi]
+        hunks = []
+        for hi in sorted(sel[fi]):
+            hunks.append((fd.hunks[hi], sel[fi][hi]))
+        result.append((fd, hunks))
+    return result
+
+
+def reconstruct_patch(selections):
+    '''Build a patch from selected changes, constructing partial hunks as
+    needed.'''
+    parts = []
+    for fd, hunk_sels in selections:
+        parts.extend(fd.headers)
+        offset = 0
+        for hunk, selected in hunk_sels:
+            hunk_lines, delta = _build_partial_hunk(hunk, selected, offset)
+            parts.extend(hunk_lines)
+            offset += delta
+    return ''.join(parts)
+
+
+def apply_patch(patch):
+    result = subprocess.run(
+        ['git', 'apply', '--cached', '--verbose'],
+        input=patch, encoding='utf-8',
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr)
+        fatal("`git apply --cached` failed")
+    if result.stderr:
+        sys.stderr.write(result.stderr)
+
+
+def fatal(*args):
+    print("fatal:", *args, file=sys.stderr)
+    sys.stderr.flush()
+    sys.exit(1)
+
+
+# --- Private helpers ---
+
+
+def _flush_hunk(file_diff, hunk):
+    if file_diff is not None and hunk is not None:
+        file_diff.hunks.append(hunk)
+
+
+def _file_hunks_start(fd):
+    '''Return the line number where hunks start for a file diff.'''
+    if fd.hunks:
+        return fd.hunks[0].start_line
+    return fd.start_line + len(fd.headers)
+
+
+def _get_max_line(file_diffs):
+    '''Return the maximum line number in the diff output.'''
+    if not file_diffs:
+        return 0
+    last_fd = file_diffs[-1]
+    if last_fd.hunks:
+        last_hunk = last_fd.hunks[-1]
+        return last_hunk.start_line + len(last_hunk.lines) - 1
+    return last_fd.start_line + len(last_fd.headers) - 1
+
+
+def _is_change_line(line):
+    return line.startswith('+') or line.startswith('-')
+
+
+def _all_change_lines(hunk):
+    '''Return the set of output line numbers that are +/- lines.'''
+    result = set()
+    for i, line in enumerate(hunk.lines):
+        if i == 0:
+            continue  # skip @@ header
+        if _is_change_line(line):
+            result.add(hunk.start_line + i)
+    return result
+
+
+def _find_change_group(hunk, line_num):
+    '''Find the contiguous group of +/- lines containing line_num.
+
+    A change group is a maximal contiguous sequence of +/- lines (with
+    backslash-newline markers treated as transparent).
+    '''
+    body = hunk.lines[1:]  # skip @@ header
+    body_start = hunk.start_line + 1
+    idx = line_num - body_start
+
+    group = set()
+    # Expand backward, treating \ lines as transparent
+    i = idx
+    while i >= 0 and (_is_change_line(body[i]) or body[i].startswith('\\')):
+        if _is_change_line(body[i]):
+            group.add(body_start + i)
+        i -= 1
+    # Expand forward
+    i = idx + 1
+    while i < len(body) and (_is_change_line(body[i])
+                             or body[i].startswith('\\')):
+        if _is_change_line(body[i]):
+            group.add(body_start + i)
+        i += 1
+    return group
+
+
+def _build_partial_hunk(hunk, selected, offset):
+    '''Build a partial hunk with only selected changes.
+
+    For unselected +lines, they are dropped entirely.
+    For unselected -lines, they are converted to context lines.
+
+    Returns (lines, net_delta) where net_delta is the net line count change
+    to track offset for subsequent hunks in the same file.
+    '''
+    header = hunk.lines[0]
+    body = hunk.lines[1:]
+
+    new_body = []
+    last_dropped = False
+    for i, line in enumerate(body):
+        out_ln = hunk.start_line + 1 + i
+        if line.startswith('+'):
+            if out_ln in selected:
+                new_body.append(line)
+                last_dropped = False
+            else:
+                last_dropped = True
+        elif line.startswith('-'):
+            if out_ln in selected:
+                new_body.append(line)
+            else:
+                new_body.append(' ' + line[1:])  # convert to context
+            last_dropped = False
+        elif line.startswith('\\'):
+            # "\ No newline at end of file": keep unless preceding was dropped
+            if not last_dropped:
+                new_body.append(line)
+            last_dropped = False
+        else:
+            new_body.append(line)  # context line
+            last_dropped = False
+
+    old_start, _, _, _, rest = _parse_hunk_header(header)
+    old_count = sum(1 for l in new_body
+                    if l.startswith(' ') or l.startswith('-'))
+    new_count = sum(1 for l in new_body
+                    if l.startswith(' ') or l.startswith('+'))
+    new_start = old_start + offset
+
+    new_header = (f'@@ -{old_start},{old_count} '
+                  f'+{new_start},{new_count} @@{rest}\n')
+    delta = new_count - old_count
+    return [new_header] + new_body, delta
+
+
+def _parse_hunk_header(header):
+    '''Parse @@ -old_start,old_count +new_start,new_count @@ rest'''
+    m = re.match(
+        r'@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*?)(?:\n)?$', header)
+    if not m:
+        fatal(f"failed to parse hunk header: {header!r}")
+    old_start = int(m.group(1))
+    old_count = int(m.group(2)) if m.group(2) is not None else 1
+    new_start = int(m.group(3))
+    new_count = int(m.group(4)) if m.group(4) is not None else 1
+    rest = m.group(5)
+    return old_start, old_count, new_start, new_count, rest
+
+
+# --- Data classes ---
+
+
+class FileDiff:
+    __slots__ = ('start_line', 'headers', 'hunks')
+
+    def __init__(self, start_line):
+        self.start_line = start_line
+        self.headers = []
+        self.hunks = []
+
+
+class Hunk:
+    __slots__ = ('start_line', 'lines')
+
+    def __init__(self, start_line):
+        self.start_line = start_line
+        self.lines = []
+
+
+if __name__ == "__main__":
+    main()

@@ -3,6 +3,11 @@
 - Git repos for all codebases are under ~/Code.
 - When working in a git repo, if the .git repo is not read-only, you SHOULD
   create a git commit using `git commit -am` (NOT -A).
+- When partially staging changes, you SHOULD use `git addhunks` which takes
+  line numbers from `git diff` output and stages only the change groups at
+  those lines.
+- When running `git rebase --continue`, you MUST set `GIT_EDITOR=true` to
+  avoid opening an interactive editor (which will fail in this environment).
 - When writing git messages:
   - You MUST add "Assisted-by: MODEL" trailers, where MODEL is the friendly model name (e.g. "Claude Opus 4.5"). You MUST NOT include the API codename.
   - If you know why the change is being made, you MUST focus on the "why", not the "what".

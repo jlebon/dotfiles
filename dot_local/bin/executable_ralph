@@ -1,0 +1,171 @@
+#!/bin/bash
+set -euo pipefail
+
+# Ralph loop: repeatedly feed a prompt to opencode, where each iteration gets
+# a fresh context window. The implementation plan on disk acts as shared state
+# between iterations. See https://github.com/ghuntley/how-to-ralph-wiggum.
+
+build_prompt() {
+    local plan_file="$1"
+    local exit_file="$2"
+    local guidance_file="$3"
+    cat <<PROMPT
+Study AGENTS.md (if present) to understand the project.
+Study ${plan_file} for the implementation plan.
+
+Your task is to implement functionality as described in the implementation plan.
+Choose the most important remaining item to address. Before making changes,
+search the codebase to confirm the item is not already implemented.
+
+After implementing, run any validation (tests, build, lint) as described in
+AGENTS.md. If functionality is missing, add it per the specifications.
+
+When you discover issues, update ${plan_file} with your findings.
+
+When validation passes, update ${plan_file} to reflect completed work
+and any new discoveries, then commit the changes with a descriptive message.
+PROMPT
+    if [ -n "${exit_file}" ]; then
+        echo ""
+        echo "If all items in the plan are complete, create a file named \"${exit_file}\" and exit."
+    fi
+    if [ -n "${guidance_file}" ]; then
+        echo ""
+        cat "${guidance_file}"
+    fi
+}
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS] PLAN [-- TOOL_ARGS...]
+
+Run an opencode ralph loop: repeatedly feed a prompt to opencode, where each
+iteration gets a fresh context window.
+
+Arguments:
+  PLAN                         Implementation plan file (e.g. PLAN.md)
+
+Options:
+  -h, --help                   Show this help message
+  -n, --max-iterations NUM     Max iterations (default: unlimited)
+  -e, --autoexit FILE          Exit when file exists (default: .ralphdone)
+  -g, --guidance FILE          Append contents of FILE to the built-in prompt
+EOF
+}
+
+max_iterations=0
+exit_file=""
+guidance_file=""
+plan_file=""
+tool_args=()
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            tool_args+=("$@")
+            break
+            ;;
+        -n|--max-iterations)
+            if [ -z "${2:-}" ]; then
+                echo "ERROR: $1 requires a number argument" >&2
+                exit 1
+            fi
+            max_iterations="$2"
+            shift 2
+            ;;
+        -e|--autoexit)
+            exit_file="${2:-.ralphdone}"
+            shift 2
+            ;;
+        -g|--guidance)
+            if [ -z "${2:-}" ]; then
+                echo "ERROR: $1 requires a file argument" >&2
+                exit 1
+            fi
+            guidance_file="$2"
+            shift 2
+            ;;
+        -*)
+            echo "ERROR: unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+        *)
+            if [ -n "${plan_file}" ]; then
+                echo "ERROR: unexpected argument: $1" >&2
+                usage >&2
+                exit 1
+            fi
+            plan_file="$1"
+            shift
+            ;;
+    esac
+done
+
+if [ -z "${plan_file}" ]; then
+    echo "ERROR: PLAN argument is required" >&2
+    usage >&2
+    exit 1
+fi
+
+if [ ! -f "${plan_file}" ]; then
+    echo "ERROR: plan file not found: ${plan_file}" >&2
+    exit 1
+fi
+
+if [ -n "${guidance_file}" ] && [ ! -f "${guidance_file}" ]; then
+    echo "ERROR: guidance file not found: ${guidance_file}" >&2
+    exit 1
+fi
+
+# Resolve tool: prefer xoc (opencode-in-container wrapper), fall back to opencode
+if command -v xoc &>/dev/null; then
+    tool=xoc
+elif command -v opencode &>/dev/null; then
+    tool=opencode
+else
+    echo "ERROR: neither xoc nor opencode found in PATH" >&2
+    exit 1
+fi
+
+# Clean up sentinel file from previous runs
+if [ -n "${exit_file}" ]; then
+    rm -f "${exit_file}"
+fi
+
+echo "ralph: plan=${plan_file}"
+if [ "${max_iterations}" -gt 0 ]; then
+    echo "ralph: max_iterations=${max_iterations}"
+fi
+if [ -n "${exit_file}" ]; then
+    echo "ralph: autoexit=${exit_file}"
+fi
+if [ -n "${guidance_file}" ]; then
+    echo "ralph: guidance=${guidance_file}"
+fi
+
+iteration=0
+while true; do
+    if [ "${max_iterations}" -gt 0 ] && [ "${iteration}" -ge "${max_iterations}" ]; then
+        echo "ralph: reached max iterations (${max_iterations})"
+        break
+    fi
+
+    echo "=== ralph: starting iteration $((iteration + 1)) ==="
+    build_prompt "${plan_file}" "${exit_file}" "${guidance_file}" | \
+        "${tool}" run "${tool_args[@]}" \
+        --title "ralph: ${plan_file} #$((iteration + 1))" || true
+
+    iteration=$((iteration + 1))
+    echo "=== ralph: completed iteration ${iteration} ==="
+
+    if [ -n "${exit_file}" ] && [ -e "${exit_file}" ]; then
+        echo "ralph: ${exit_file} exists, exiting"
+        break
+    fi
+done

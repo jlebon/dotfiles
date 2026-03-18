@@ -17,6 +17,7 @@ set -euo pipefail
 ## Edit commit message  Ctrl-R
 ## Delete top commit    Ctrl-X
 ## Rebase on commit     Ctrl-B
+## Rebase with break    Alt-B
 ## Reload log           Ctrl-S
 ## 
 ## Browser:
@@ -84,6 +85,7 @@ fzf --track --ansi --no-sort --reverse --tiebreak=index -m -d '\x00' --nth 4,6 \
   --bind "ctrl-t:+reload:${FZF_DEFAULT_COMMAND}" \
   --bind 'ctrl-b:execute([ -z {2} ] || git rebase -i {2})' \
   --bind "ctrl-b:+reload:${FZF_DEFAULT_COMMAND}" \
+  --bind "alt-b:become([ -z {2} ] || GIT_SEQUENCE_EDITOR=\"sed -i '1i\\break'\" git rebase -i {2})" \
   --bind 'ctrl-x:execute([ -z {2} ] || git nuke)' \
   --bind "ctrl-x:+reload:${FZF_DEFAULT_COMMAND}" \
   --bind "ctrl-s:reload:${FZF_DEFAULT_COMMAND}" \

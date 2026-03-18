@@ -422,6 +422,7 @@ fi
 # clean up hostexec on exit
 cleanup() {
     if [ -n "${hostd_pid}" ]; then
+        HOSTEXEC_SOCKET="${hostd_sock}" hostexec notify session-exit 2>/dev/null || true
         kill "${hostd_pid}" 2>/dev/null
         wait "${hostd_pid}" 2>/dev/null
         rm -f "${hostd_sock_file}"

@@ -13,9 +13,12 @@ build_prompt() {
 Study AGENTS.md (if present) to understand the project.
 Study ${plan_file} for the implementation plan.
 
-Your task is to implement functionality as described in the implementation plan.
-Choose the most important remaining item to address. Before making changes,
-search the codebase to confirm the item is not already implemented.
+Your task is to implement functionality as described in the implementation
+plan. THIS IS IMPORTANT: ONLY WORK ON ONE ITEM OF THE PLAN, i.e. the next most
+important one. NOTHING ELSE.
+
+Before making changes, search the codebase to confirm the item is not already
+implemented.
 
 After implementing, run any validation (tests, build, lint) as described in
 AGENTS.md. If functionality is missing, add it per the specifications.

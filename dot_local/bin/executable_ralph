@@ -136,6 +136,10 @@ else
     exit 1
 fi
 
+# Disable the question tool; it hangs in non-interactive mode because
+# Question.ask() bypasses the permission system and waits for a reply forever.
+export OPENCODE_CLIENT=headless
+
 # Clean up sentinel file from previous runs
 if [ -n "${exit_file}" ]; then
     rm -f "${exit_file}"

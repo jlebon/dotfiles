@@ -391,6 +391,10 @@ else
         --env OPENCODE_CONFIG_CONTENT='{"instructions":["/run/opencode-context.md"]}'
     )
     HOST_SPAWN_ENV=VERTEX_REGION,GOOGLE_CLOUD_PROJECT,OPENCODE_PERMISSION
+    if [ -n "${OPENCODE_CLIENT:-}" ]; then
+        podman_args+=(--env OPENCODE_CLIENT)
+        HOST_SPAWN_ENV="${HOST_SPAWN_ENV},OPENCODE_CLIENT"
+    fi
 fi
 
 HOST_SPAWN_ENV="${HOST_SPAWN_ENV},GITHUB_TOKEN"

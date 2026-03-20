@@ -255,6 +255,7 @@ if [ -e .git ]; then
     fi
     podman_args+=(-v "${PWD}"/.git:"${PWD}"/.git:"${git_mount_mode}")
     if [ "${git_mount_mode}" = "rw" ]; then
+        podman_args+=(-v "${primary_worktree}/.git/config:${primary_worktree}/.git/config:ro")
         podman_args+=(-v "${HOME}/.gitconfig:${HOME}/.gitconfig:ro")
         podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign:${HOME}/.ssh/id_ed25519.git-sign:ro")
         podman_args+=(-v "${HOME}/.ssh/id_ed25519.git-sign.pub:${HOME}/.ssh/id_ed25519.git-sign.pub:ro")
@@ -290,6 +291,9 @@ for repo in "${add_repos[@]}"; do
     repo_path=$(realpath "$(codeswitch ~/Code "${repo}")")
     resolved_repos+=("${repo_path}")
     podman_args+=(-v "${repo_path}:${repo_path}:${repo_mode}")
+    if [ "${repo_mode}" = "rw" ] && [ -d "${repo_path}/.git" ]; then
+        podman_args+=(-v "${repo_path}/.git/config:${repo_path}/.git/config:ro")
+    fi
     mount_target_symlink "${repo_path}"
     if [ "${mode}" = "claude" ]; then
         tool_args+=(--add-dir "${repo_path}")

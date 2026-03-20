@@ -156,7 +156,20 @@ if [ -n "${guidance_file}" ]; then
     echo "ralph: guidance=${guidance_file}"
 fi
 
+format_duration() {
+    local seconds="$1"
+    local mins=$((seconds / 60))
+    local secs=$((seconds % 60))
+    if [ "${mins}" -gt 0 ]; then
+        echo "${mins}m${secs}s"
+    else
+        echo "${secs}s"
+    fi
+}
+
 iteration=0
+durations=()
+total_start="${SECONDS}"
 while true; do
     if [ "${max_iterations}" -gt 0 ] && [ "${iteration}" -ge "${max_iterations}" ]; then
         echo "ralph: reached max iterations (${max_iterations})"
@@ -164,9 +177,11 @@ while true; do
     fi
 
     echo "=== ralph: starting iteration $((iteration + 1)) ==="
+    iter_start="${SECONDS}"
     build_prompt "${plan_file}" "${exit_file}" "${guidance_file}" | \
         "${tool}" run "${tool_args[@]}" \
         --title "ralph: ${plan_file} #$((iteration + 1))" || true
+    durations+=($((SECONDS - iter_start)))
 
     iteration=$((iteration + 1))
     echo "=== ralph: completed iteration ${iteration} ==="
@@ -176,3 +191,10 @@ while true; do
         break
     fi
 done
+
+echo ""
+echo "ralph: summary"
+for i in "${!durations[@]}"; do
+    echo "  iteration $((i + 1)): $(format_duration "${durations[$i]}")"
+done
+echo "  total: $(format_duration $((SECONDS - total_start)))"

@@ -51,7 +51,7 @@ Arguments:
 Options:
   -h, --help                   Show this help message
   -n, --max-iterations NUM     Max iterations (default: unlimited)
-  -e, --autoexit FILE          Exit when file exists (default: .ralphdone)
+  -e, --autoexit               Exit when all plan items are complete
   -g, --guidance FILE          Append contents of FILE to the built-in prompt
 EOF
 }
@@ -82,8 +82,8 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         -e|--autoexit)
-            exit_file="${2:-.ralphdone}"
-            shift 2
+            exit_file=".ralphdone"
+            shift
             ;;
         -g|--guidance)
             if [ -z "${2:-}" ]; then

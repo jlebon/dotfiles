@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+FLATPAK_SPAWN=
+
+if { [ -f /.dockerenv ] || [ -f /run/.containerenv ]; } && \
+                command -v flatpak-spawn >/dev/null; then
+        FLATPAK_SPAWN="flatpak-spawn --host"
+fi
+
+exec $FLATPAK_SPAWN /usr/bin/xdg-open "$@"

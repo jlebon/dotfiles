@@ -1,0 +1,20 @@
+#!/bin/bash
+set -euo pipefail
+
+repo=$1; shift  # e.g. redhat/hummingbird/rpms
+mr=$1; shift    # e.g. 641
+
+while true; do
+    json=$(glab mr view "${mr}" -F json -R "${repo}")
+    state=$(echo "$json" | jq -r .state)
+    pipeline=$(echo "$json" | jq -r .head_pipeline.status)
+    if [ "$state" = "merged" ]; then
+        echo "MR 641 has been merged!"
+        break
+    elif [ "$pipeline" = "failed" ]; then
+        echo "MR 641 pipeline has failed!"
+        break
+    fi
+    echo "Waiting... (state=$state, pipeline=$pipeline)"
+    sleep 30
+done

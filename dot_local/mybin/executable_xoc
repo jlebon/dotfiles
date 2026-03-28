@@ -12,7 +12,7 @@ esac
 # image in which we're running. The primary use case is a pet container image
 # you've customized with various dev tools, and you want Claude/OpenCode to
 # be able to use those tools as well in --dangerously-skip-permissions mode.
-# Note this runs `podman`; in my case, `podman` is actually ~/.local/bin/podman
+# Note this runs `podman`; in my case, `podman` is actually ~/.local/mybin/podman
 # and just proxies to the real host podman via `host-spawn`. That wrapper is
 # available in my dotfiles repo as well, but one can probably just change the
 # podman call at the bottom to `flatpak-spawn --host`
@@ -218,7 +218,7 @@ podman_args+=(
     -v "${vol_prefix}-var-tmp:/var/tmp"
     -v "${vol_prefix}-tmp:/tmp"
     --label "${mode}=1"
-    --env PATH
+    --env PATH="${PATH}"
     --env HOME="${HOME}"
     --tmpfs "${HOME}"
     --tz local
@@ -226,6 +226,7 @@ podman_args+=(
     -v "${HOME}/.cargo:${HOME}/.cargo"
     -v "${HOME}/.rustup:${HOME}/.rustup:ro"
     -v "${HOME}"/Code/nodejs:"${HOME}"/Code/nodejs:O
+    -v "${HOME}"/.local/mybin:"${HOME}"/.local/mybin:ro
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:ro
     -v "${PWD}":"${PWD}"
     -w "${PWD}"

@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("jrnl-auto-clipper")
 
-JRNL_CLIPPER = "/home/jlebon/.local/bin/jrnl-clipper"
+JRNL_CLIPPER = "/home/jlebon/.local/mybin/jrnl-clipper"
 
 
 def wait_for_container():

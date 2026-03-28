@@ -23,7 +23,7 @@ Files in this repo map to home directory locations:
 - `executable_` prefix → file will be executable
 - `symlink_` prefix → creates a symlink (file content is the target path)
 - `private_` prefix → sets restricted permissions (mode 0600)
-- Files in `dot_local/bin/` → `~/.local/bin/`
+- Files in `dot_local/mybin/` → `~/.local/mybin/`
 - Files in `dot_bashrc.d/` → `~/.bashrc.d/` (sourced by bashrc)
 - Files in `dot_config/` → `~/.config/`
 

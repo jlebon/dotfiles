@@ -3,7 +3,7 @@ Description=jrnl Auto Clipper
 
 [Service]
 Type=simple
-ExecStart=/home/jlebon/.local/bin/jrnl-auto-clipper
+ExecStart=/home/jlebon/.local/mybin/jrnl-auto-clipper
 Restart=on-failure
 RestartSec=5
 

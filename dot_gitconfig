@@ -111,6 +111,7 @@
 	diffFilter = delta --color-only
 [delta]
 	light = true
+	features = arctic-fox
 	navigate = true # use n and N to move between diff sections
 	file-decoration-style = blue box bold
 	hunk-header-decoration-style = hidden

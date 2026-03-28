@@ -1,4 +1,5 @@
-theme = "monokai_pro_machine"
+theme = "monokai_pro_machine_light"
+# theme = "wolf-alabaster-light-bg"
 
 [editor]
 bufferline = "multiple"

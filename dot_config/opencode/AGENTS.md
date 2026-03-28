@@ -27,3 +27,4 @@
   `hostexec run <command> [args...]`. This will prompt the user for approval.
 - For read-write `gh` operations (e.g. creating PRs, merging, commenting), run
   `gh` in the host context.
+- For `rhjira` operationrs, run it in the host context.

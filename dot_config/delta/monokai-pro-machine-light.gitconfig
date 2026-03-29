@@ -1,0 +1,50 @@
+[delta "monokai-pro-machine-light"]
+    light = true
+    syntax-theme = Monokai Extended Light
+    line-numbers = true
+    navigate = true
+
+    # file headers
+    file-style = "#2596c4"
+    file-decoration-style = "#d0d0d0" ul
+    file-added-label = [+]
+    file-copied-label = [==]
+    file-modified-label = [*]
+    file-removed-label = [-]
+    file-renamed-label = [->]
+
+    # hunk headers
+    hunk-header-style = file line-number syntax
+    hunk-header-decoration-style = "#d0d0d0" box
+    hunk-header-file-style = "#2596c4"
+    hunk-header-line-number-style = "#7b56c4"
+
+    # commit info
+    commit-style = "#448c27" bold
+    commit-decoration-style = "#d0d0d0" box
+
+    # diff content
+    minus-style = syntax "#fce8eb"
+    minus-emph-style = syntax "#f5c6cd"
+    plus-style = syntax "#e6f4e0"
+    plus-emph-style = syntax "#c5e8b8"
+    zero-style = syntax
+
+    # line numbers
+    line-numbers-left-format = " {nm:>3} │"
+    line-numbers-right-format = " {np:>3} │"
+    line-numbers-left-style = "#d0d0d0"
+    line-numbers-right-style = "#d0d0d0"
+    line-numbers-minus-style = "#d9405f"
+    line-numbers-plus-style = "#4f9429"
+    line-numbers-zero-style = "#8a9694"
+
+    # blame
+    blame-code-style = syntax
+    blame-palette = "#f7f7f7" "#eeeeee" "#e4e4e4"
+
+    # whitespace
+    whitespace-error-style = "#d9405f" reverse
+
+    # inline hints
+    inline-hint-style = "#8a9694"

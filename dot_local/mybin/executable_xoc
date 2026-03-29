@@ -38,6 +38,8 @@ net_mode=""
 clean_volumes=false
 force_update=false
 allow_no_git=false
+web_mode=false
+web_port=4096
 usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS] [-- ARGS...]
@@ -60,6 +62,8 @@ Options:
   --clean       Remove existing named volumes before starting
   --allow-no-git Allow starting in a directory that is not a git repo
   --update      Force an opencode update (opencode mode only)
+  --web         Run in web server mode (opencode only); serves UI on LAN
+  --port PORT   Port for web server (default: 4096; implies --web)
   --            Stop parsing options; remaining args passed to tool
 EOF
 }
@@ -127,6 +131,19 @@ while [ $# -gt 0 ]; do
             force_update=true
             shift
             ;;
+        --web)
+            web_mode=true
+            shift
+            ;;
+        --port)
+            if [ -z "${2:-}" ]; then
+                echo "ERROR: --port requires a port number argument" >&2
+                exit 1
+            fi
+            web_port="$2"
+            web_mode=true
+            shift 2
+            ;;
         --add-dir)
             if [ -z "${2:-}" ]; then
                 echo "ERROR: --add-dir requires a directory argument" >&2
@@ -158,6 +175,30 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+if [ "${web_mode}" = "true" ] && [ "${mode}" != "opencode" ]; then
+    echo "ERROR: --web is only supported in opencode mode" >&2
+    exit 1
+fi
+
+if [ "${web_mode}" = "true" ] && [ "${run_bash}" = "true" ]; then
+    echo "ERROR: --web and --bash are mutually exclusive" >&2
+    exit 1
+fi
+
+if [ "${web_mode}" = "true" ]; then
+    web_password_file="${XDG_CONFIG_HOME:-${HOME}/.config}/opencode/web-password.txt"
+    if [ ! -f "${web_password_file}" ]; then
+        echo "ERROR: web password file not found: ${web_password_file}" >&2
+        echo "Create it with: echo 'your-password' > '${web_password_file}' && chmod 600 '${web_password_file}'" >&2
+        exit 1
+    fi
+    web_password=$(cat "${web_password_file}")
+    if [ -z "${web_password}" ]; then
+        echo "ERROR: web password file is empty: ${web_password_file}" >&2
+        exit 1
+    fi
+fi
 
 if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ] && [ "${allow_no_git}" != "true" ]; then
     echo "ERROR: not in a git repo" >&2
@@ -246,7 +287,9 @@ else
         -v "${HOME}"/.local/state/opencode:"${HOME}"/.local/state/opencode
         -v "${HOME}"/.cache/opencode:"${HOME}"/.cache/opencode
     )
-    # --publish 192.168.2.1:8080:8080
+    if [ "${web_mode}" = "true" ]; then
+        podman_args+=(--publish "0.0.0.0:${web_port}:${web_port}")
+    fi
 fi
 
 if [ -e .git ]; then
@@ -395,6 +438,9 @@ else
         -v "${context_file}:/run/opencode-context.md:ro"
         --env OPENCODE_CONFIG_CONTENT='{"instructions":["/run/opencode-context.md"]}'
     )
+    if [ "${web_mode}" = "true" ]; then
+        podman_args+=(--env OPENCODE_SERVER_PASSWORD="${web_password}")
+    fi
     HOST_SPAWN_ENV=VERTEX_REGION,GOOGLE_CLOUD_PROJECT,OPENCODE_PERMISSION
     if [ -n "${OPENCODE_CLIENT:-}" ]; then
         podman_args+=(--env OPENCODE_CLIENT)
@@ -440,6 +486,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if [ "${web_mode}" = "true" ]; then
+    echo "OpenCode web server starting on port ${web_port}"
+    echo "Connect from your phone at: http://<your-host-ip>:${web_port}"
+fi
+
 # and the actual image and command
 podman_args+=("${imageid}")
 if [ "${run_bash}" = "true" ]; then
@@ -453,6 +504,8 @@ elif [ "${mode}" = "claude" ]; then
 else
     podman "${podman_args[@]}" bash -c '
 force_update="$1"; shift
+web_mode="$1"; shift
+web_port="$1"; shift
 bin="$HOME/.opencode/bin/opencode"
 if [ -f "$bin" ]; then
     mtime=$(stat -c %Y "$bin" 2>/dev/null || echo 0)
@@ -461,5 +514,9 @@ if [ -f "$bin" ]; then
         "$bin" upgrade && touch "$bin"
     fi
 fi
-exec "$bin" "$@"' -- "${force_update}" "${tool_args[@]}"
+if [ "$web_mode" = "true" ]; then
+    exec "$bin" serve --hostname 0.0.0.0 --port "$web_port" "$@"
+else
+    exec "$bin" "$@"
+fi' -- "${force_update}" "${web_mode}" "${web_port}" "${tool_args[@]}"
 fi

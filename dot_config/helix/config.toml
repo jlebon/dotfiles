@@ -1,4 +1,4 @@
-theme = "monokai_pro_machine_light"
+theme = "gruvbox_light_custom"
 # theme = "wolf-alabaster-light-bg"
 
 [editor]

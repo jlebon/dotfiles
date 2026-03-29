@@ -1,0 +1,43 @@
+# Gruvbox Light Custom
+# Consistent with ghostty and opencode gruvbox-light-custom themes
+# Based on the built-in gruvbox_light with the full palette inlined
+
+inherits = "gruvbox_light"
+
+# Override selection to use bg2 instead of bg3 for subtler highlighting
+"ui.selection" = { bg = "bg2" }
+"ui.selection.primary" = { bg = "bg3" }
+
+# Use reversed cursor (adapts to underlying text colors)
+"ui.cursor.primary" = { modifiers = ["reversed"] }
+"ui.cursor.match" = { bg = "bg2" }
+
+# Diagnostics with curl underlines
+"diagnostic.error" = { underline = { color = "red0", style = "curl" } }
+"diagnostic.warning" = { underline = { color = "yellow0", style = "curl" } }
+"diagnostic.info" = { underline = { color = "blue0", style = "curl" } }
+"diagnostic.hint" = { underline = { color = "aqua0", style = "curl" } }
+
+[palette]
+bg0 = "#f5f0cd"
+bg1 = "#ebdbb2"
+bg2 = "#d5c4a1"
+bg3 = "#bdae93"
+bg4 = "#a89984"
+
+fg0 = "#282828"
+fg1 = "#3c3836"
+fg2 = "#504945"
+fg3 = "#665c54"
+fg4 = "#7c6f64"
+
+gray = "#928374"
+
+red0 = "#cc241d"
+red1 = "#b81c15"
+green1 = "#8c8a14"
+yellow1 = "#c58a1c"
+blue1 = "#2c7a82"
+purple1 = "#a35480"
+aqua1 = "#5a9064"
+orange1 = "#c65010"

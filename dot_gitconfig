@@ -84,9 +84,9 @@
 	xgc = "!git reflog expire --expire=now --all && git gc --prune=now --aggressive"
 
 	# Difftastic aliases, so `git dlog` is `git log` with difftastic and so on.
-	# dlog = -c diff.external=difft log --ext-diff
-	# dshow = -c diff.external=difft show --ext-diff
-	# ddiff = -c diff.external=difft diff
+	dlog = -c diff.external=difft log --ext-diff
+	dshow = -c diff.external=difft show --ext-diff
+	ddiff = -c diff.external=difft diff
 [pull]
 	rebase = true
 [fetch]
@@ -95,7 +95,6 @@
 	default = simple
 	autoSetupRemote = true
 [diff]
-    # external = difft
 	algorithm = histogram
 	renames = copies
 	indentHeuristic = true
@@ -111,7 +110,7 @@
 	diffFilter = delta --color-only
 [delta]
 	light = true
-	features = arctic-fox
+    line-numbers = true
 	navigate = true # use n and N to move between diff sections
 	file-decoration-style = blue box bold
 	hunk-header-decoration-style = hidden

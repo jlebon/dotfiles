@@ -1,5 +1,7 @@
-theme = "monokai_pro_machine_light"
-# theme = "wolf-alabaster-light-bg"
+[theme]
+dark = "a11y_dark"
+light = "a11y_light"
+fallback = "a11y_light"
 
 [editor]
 bufferline = "multiple"

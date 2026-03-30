@@ -1,0 +1,154 @@
+# A clean, minimalist light theme using the Alabaster color palette
+# Color palette sourced from Ghostty's Alabaster theme (iTerm2-Color-Schemes)
+
+# Syntax highlighting ---------------------------------------------------------
+
+"type" = "cyan"
+"type.builtin" = "cyan"
+"constructor" = "blue"
+"constant" = "purple"
+"constant.builtin" = "purple"
+"constant.numeric" = "purple"
+"constant.character.escape" = "bright_red"
+"string" = "green"
+"string.regexp" = "bright_blue"
+"string.special" = "yellow"
+"comment" = { fg = "gray", modifiers = ["italic"] }
+"variable" = "foreground"
+"variable.builtin" = "blue"
+"variable.parameter" = "foreground"
+"variable.other.member" = "foreground"
+"label" = "yellow"
+"punctuation" = "dark_gray"
+"keyword" = { fg = "red" }
+"keyword.control" = "red"
+"keyword.directive" = "purple"
+"operator" = "dark_gray"
+"function" = "blue"
+"function.macro" = { fg = "purple" }
+"function.builtin" = { fg = "bright_blue" }
+"tag" = "blue"
+"namespace" = "cyan"
+"attribute" = "purple"
+"special" = "yellow"
+"module" = "dark_gray"
+
+# Markup -----------------------------------------------------------------------
+
+"markup.heading" = { fg = "blue", modifiers = ["bold"] }
+"markup.list" = "yellow"
+"markup.bold" = { fg = "yellow", modifiers = ["bold"] }
+"markup.italic" = { fg = "yellow", modifiers = ["italic"] }
+"markup.strikethrough" = { modifiers = ["crossed_out"] }
+"markup.raw.block" = "green"
+"markup.link.url" = { fg = "cyan", modifiers = ["underlined"] }
+"markup.link.text" = "blue"
+"markup.link.label" = "green"
+"markup.quote" = "green"
+
+# Diff -------------------------------------------------------------------------
+
+"diff.plus" = "green"
+"diff.minus" = "red"
+"diff.delta" = "yellow"
+
+# Interface --------------------------------------------------------------------
+
+# background
+"ui.background" = { bg = "background" }
+
+# cursor
+"ui.cursor" = { fg = "background", bg = "dark_gray" }
+"ui.cursor.primary" = { fg = "cursor_text", bg = "cursor" }
+"ui.cursor.match" = { bg = "match" }
+"ui.cursorline" = { bg = "panel" }
+
+# line numbers
+"ui.linenr" = { fg = "light_gray" }
+"ui.linenr.selected" = { fg = "dark_gray", bg = "panel" }
+
+# status bars
+"ui.statusline" = { fg = "foreground", bg = "border" }
+"ui.statusline.inactive" = { fg = "gray", bg = "panel" }
+"ui.statusline.normal" = { fg = "background", bg = "blue" }
+"ui.statusline.insert" = { fg = "background", bg = "green" }
+"ui.statusline.select" = { fg = "background", bg = "purple" }
+
+# menus, popups, panels
+"ui.popup" = { fg = "foreground", bg = "panel" }
+"ui.window" = { fg = "border" }
+"ui.help" = { fg = "foreground", bg = "panel" }
+"ui.menu" = { fg = "foreground", bg = "panel" }
+"ui.menu.selected" = { fg = "background", bg = "blue" }
+
+# text
+"ui.text" = { fg = "foreground" }
+"ui.text.focus" = { fg = "foreground", bg = "border" }
+"ui.text.info" = "foreground"
+
+# selection
+"ui.selection" = { bg = "selection" }
+
+# bufferline
+"ui.bufferline" = { fg = "gray", bg = "panel" }
+"ui.bufferline.active" = { fg = "foreground", bg = "background" }
+
+# virtual elements
+"ui.virtual.whitespace" = "border"
+"ui.virtual.ruler" = { bg = "panel" }
+"ui.virtual.inlay-hint" = { fg = "gray" }
+"ui.virtual.jump-label" = { fg = "bright_red", modifiers = ["bold"] }
+
+# debugging
+"ui.debug" = { fg = "yellow" }
+"ui.highlight.frameline" = { bg = "#e8f0fe" }
+
+# Diagnostics ------------------------------------------------------------------
+
+"warning" = "yellow"
+"error" = { fg = "red", modifiers = ["bold"] }
+"info" = { fg = "blue", modifiers = ["bold"] }
+"hint" = { fg = "bright_blue", modifiers = ["bold"] }
+
+"diagnostic.warning" = { underline = { color = "yellow", style = "curl" } }
+"diagnostic.error" = { underline = { color = "red", style = "curl" } }
+"diagnostic.info" = { underline = { color = "blue", style = "curl" } }
+"diagnostic.hint" = { underline = { color = "bright_blue", style = "curl" } }
+"diagnostic.unnecessary" = { modifiers = ["dim"] }
+"diagnostic.deprecated" = { modifiers = ["crossed_out"] }
+
+# Palette ----------------------------------------------------------------------
+# Colors sourced from Ghostty's Alabaster theme (iTerm2-Color-Schemes)
+
+[palette]
+
+# primary colors
+red = "#aa3731"
+green = "#448c27"
+yellow = "#cb9000"
+blue = "#325cc0"
+purple = "#7a3e9d"
+cyan = "#0083b2"
+
+# bright variants
+bright_red = "#f05050"
+bright_green = "#60cb00"
+bright_yellow = "#f2af50"
+bright_blue = "#007acc"
+bright_magenta = "#e64ce6"
+bright_cyan = "#00aacb"
+
+# base colors
+foreground = "#000000"
+background = "#f7f7f7"
+dark_gray = "#555555"
+gray = "#777777"
+light_gray = "#b7b7b7"
+
+# ui colors
+panel = "#eeeeee"
+border = "#e0e0e0"
+selection = "#bfdbfe"
+cursor = "#007acc"
+cursor_text = "#ffffff"
+match = "#fef3cd"

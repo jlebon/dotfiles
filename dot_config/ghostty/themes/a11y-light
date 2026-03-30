@@ -1,0 +1,30 @@
+# a11y Light
+# Based on a11y-syntax-highlighting by Eric Bailey
+# High contrast light theme optimized for accessibility
+
+background = #fefefe
+foreground = #545454
+cursor-color = #545454
+cursor-text = #fefefe
+selection-background = #d0d0d0
+selection-foreground = #545454
+
+# Normal colors
+palette = 0=#fefefe
+palette = 1=#d91e18
+palette = 2=#008000
+palette = 3=#aa5d00
+palette = 4=#326bad
+palette = 5=#9400d3
+palette = 6=#007299
+palette = 7=#696969
+
+# Bright colors (darker for light background)
+palette = 8=#808080
+palette = 9=#b71613
+palette = 10=#006600
+palette = 11=#856514
+palette = 12=#275490
+palette = 13=#7600a8
+palette = 14=#005c7a
+palette = 15=#545454

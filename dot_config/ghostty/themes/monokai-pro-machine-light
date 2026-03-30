@@ -1,0 +1,29 @@
+# Monokai Pro Machine Light
+# Consistent with helix and opencode monokai-pro-machine-light themes
+
+background = #f7f7f7
+foreground = #1d2528
+cursor-color = #1d2528
+cursor-text = #f7f7f7
+selection-background = #d0d0d0
+selection-foreground = #1d2528
+
+# Normal colors
+palette = 0=#f7f7f7
+palette = 1=#d9405f
+palette = 2=#4f9429
+palette = 3=#a68f00
+palette = 4=#2596c4
+palette = 5=#7b56c4
+palette = 6=#1a8a8a
+palette = 7=#8a9694
+
+# Bright colors (darker/saturated for light background)
+palette = 8=#6b7876
+palette = 9=#c33552
+palette = 10=#448221
+palette = 11=#917c00
+palette = 12=#1e85b2
+palette = 13=#6c49b0
+palette = 14=#147a7d
+palette = 15=#1d2528

@@ -1,0 +1,29 @@
+# Gruvbox Light Custom
+# Consistent with helix and opencode gruvbox-light-custom themes
+
+background = #f5f0cd
+foreground = #3c3836
+cursor-color = #3c3836
+cursor-text = #f5f0cd
+selection-background = #d5c4a1
+selection-foreground = #3c3836
+
+# Normal colors
+palette = 0=#f5f0cd
+palette = 1=#cc241d
+palette = 2=#70700c
+palette = 3=#92640b
+palette = 4=#3b7578
+palette = 5=#9e5576
+palette = 6=#4b764d
+palette = 7=#776a60
+
+# Bright colors (darker/saturated for light background)
+palette = 8=#76695d
+palette = 9=#b81c15
+palette = 10=#6f710b
+palette = 11=#95620a
+palette = 12=#2a767e
+palette = 13=#a0527d
+palette = 14=#477650
+palette = 15=#3c3836

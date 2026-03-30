@@ -1,0 +1,135 @@
+# Light variant of the Monokai Pro Machine theme
+# Based on monokai_pro_machine.toml by WindSoilder
+# Primary colors darkened/saturated for readability on a light background
+# Base colors inverted while preserving the Machine filter's teal tint
+
+"ui.linenr.selected" = { bg = "base3" }
+"ui.text.focus" = { fg = "yellow", modifiers= ["bold"] }
+"ui.menu" = { fg = "base8", bg = "base3" }
+"ui.menu.selected" = { fg = "base2", bg = "yellow" }
+"ui.virtual.whitespace" = "base5"
+"ui.virtual.ruler" = { bg = "base1" }
+"ui.virtual.jump-label" = { fg = "red", modifiers = ["bold"] }
+
+"info" = "base8"
+"hint" = "base8"
+
+# background color
+"ui.background" = { bg = "base2" }
+"ui.statusline.inactive" = { fg = "base8", bg = "base8x0c" }
+
+# status bars, panels, modals, autocompletion
+"ui.statusline" = { fg = "base8", bg = "base4" }
+"ui.popup" = { bg = "base3" }
+"ui.window" = { bg = "base3" }
+"ui.help" = { fg = "base8", bg = "base3" }
+
+# active line, highlighting
+"ui.selection" = { bg = "base4" }
+"ui.cursor.match" = { bg = "base4" }
+"ui.cursorline" = { bg = "base1" }
+
+# bufferline, inlay hints
+"ui.bufferline" = { fg = "base6", bg = "base8x0c" }
+"ui.bufferline.active" = { fg = "base8", bg = "base4" }
+"ui.virtual.inlay-hint" = { fg = "base6" }
+
+# comments, nord3 based lighter color
+"comment" = { fg = "base5", modifiers = ["italic"] }
+"ui.linenr" = { fg = "base5" }
+
+# cursor, variables, constants, attributes, fields
+"ui.cursor.primary" = { fg = "base7", modifiers = ["reversed"] }
+"attribute" = "blue"
+"variable"  = "base8"
+"constant"  = "orange"
+"variable.builtin" = "red"
+"constant.builtin" = "red"
+"namespace" = "base8"
+
+# base text, punctuation
+"ui.text" = { fg = "base8" }
+"punctuation" = "base6"
+
+# classes, types, primitives
+"type" = "green"
+"type.builtin" = { fg = "red"}
+"label" = "base8"
+
+# declaration, methods, routines
+"constructor" = "blue"
+"function" = "green"
+"function.macro" = { fg = "blue" }
+"function.builtin" = { fg = "cyan" }
+
+# operator, tags, units, punctuations
+"operator" = "red"
+"variable.other.member" = "base8"
+
+# keywords, special
+"keyword" = { fg = "red" }
+"keyword.directive" = "blue"
+"variable.parameter" = "#c06828"
+
+# error
+"error" = "red"
+
+# annotations, decorators
+"special" = "#c06828"
+"module" = "#c06828"
+
+# warnings, escape characters, regex
+"warning" = "orange"
+"constant.character.escape" = { fg = "base8" }
+
+# strings
+"string" = "yellow"
+
+# integer, floating point
+"constant.numeric" = "purple"
+
+# vcs
+"diff.plus" = "green"
+"diff.delta" = "orange"
+"diff.minus" = "red"
+
+# make diagnostic underlined, to distinguish with selection text.
+"diagnostic.warning" = { underline = { color = "orange", style = "curl" } }
+"diagnostic.error" = { underline = { color = "red", style = "curl" } }
+"diagnostic.info" = { underline = { color = "base8", style = "curl" } }
+"diagnostic.hint" = { underline = { color = "base8", style = "curl" } }
+"diagnostic.unnecessary" = { modifiers = ["dim"] }
+"diagnostic.deprecated" = { modifiers = ["crossed_out"] }
+
+# markup highlight
+"markup.heading" = "green"
+"markup.raw" = "cyan"
+"markup.raw.inline" = "cyan"
+"markup.bold" = { fg = "orange", modifiers = ["bold"] }
+"markup.italic" = { fg = "orange", modifiers = ["italic"] }
+"markup.strikethrough" = { modifiers = ["crossed_out"] }
+"markup.link.url" = { fg = "orange", modifiers = ["underlined"] }
+"markup.link.text" = "yellow"
+"markup.quote" = "green"
+
+[palette]
+# primary colors (darkened/saturated for light background)
+"red" = "#d9405f"
+"orange" = "#c87520"
+"yellow" = "#a68f00"
+"green" = "#4f9429"
+"blue" = "#2596c4"
+"purple" = "#7b56c4"
+"cyan" = "#1a8a8a"
+# base colors (inverted, preserving teal tint)
+"base0" = "#1a2321"
+"base1" = "#efefef"
+"base2" = "#f7f7f7"
+"base3" = "#e4e4e4"
+"base4" = "#d0d0d0"
+"base5" = "#8a9694"
+"base6" = "#6b7876"
+"base7" = "#3d4a48"
+"base8" = "#1d2528"
+# variants
+"base8x0c" = "#eaeaea"

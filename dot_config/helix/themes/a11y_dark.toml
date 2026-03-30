@@ -1,0 +1,131 @@
+# a11y Dark
+# Based on a11y-syntax-highlighting by Eric Bailey
+# High contrast dark theme optimized for accessibility
+
+"ui.linenr.selected" = { bg = "bg2" }
+"ui.text.focus" = { fg = "yellow", modifiers = ["bold"] }
+"ui.menu" = { fg = "fg", bg = "bg2" }
+"ui.menu.selected" = { fg = "bg", bg = "yellow" }
+"ui.virtual.whitespace" = "gray"
+"ui.virtual.ruler" = { bg = "bg1" }
+"ui.virtual.jump-label" = { fg = "red", modifiers = ["bold"] }
+
+"info" = "fg"
+"hint" = "fg"
+
+# background color
+"ui.background" = { bg = "bg" }
+"ui.statusline.inactive" = { fg = "muted", bg = "bg1" }
+
+# status bars, panels, modals, autocompletion
+"ui.statusline" = { fg = "fg", bg = "bg3" }
+"ui.popup" = { bg = "bg2" }
+"ui.window" = { bg = "bg2" }
+"ui.help" = { fg = "fg", bg = "bg2" }
+
+# active line, highlighting
+"ui.selection" = { bg = "bg3" }
+"ui.cursor.match" = { bg = "bg3" }
+"ui.cursorline" = { bg = "bg1" }
+
+# bufferline, inlay hints
+"ui.bufferline" = { fg = "muted", bg = "bg1" }
+"ui.bufferline.active" = { fg = "fg", bg = "bg3" }
+"ui.virtual.inlay-hint" = { fg = "muted" }
+
+# comments, line numbers
+"comment" = { fg = "comment", modifiers = ["italic"] }
+"ui.linenr" = { fg = "gray" }
+
+# cursor, variables, constants, attributes
+"ui.cursor.primary" = { fg = "fg", modifiers = ["reversed"] }
+"attribute" = "yellow"
+"variable" = "fg"
+"constant" = "orange"
+"variable.builtin" = "red"
+"constant.builtin" = "red"
+"namespace" = "fg"
+
+# base text, punctuation
+"ui.text" = { fg = "fg" }
+"punctuation" = "comment"
+
+# classes, types, primitives
+"type" = "cyan"
+"type.builtin" = "cyan"
+"label" = "fg"
+
+# declaration, methods, routines
+"constructor" = "cyan"
+"function" = "yellow"
+"function.macro" = { fg = "purple" }
+"function.builtin" = { fg = "yellow" }
+
+# operator, tags, units
+"operator" = "cyan"
+"variable.other.member" = "fg"
+
+# keywords, special
+"keyword" = { fg = "purple" }
+"keyword.directive" = "purple"
+"variable.parameter" = "orange"
+
+# error
+"error" = "red"
+
+# annotations, decorators
+"special" = "orange"
+"module" = "orange"
+
+# warnings, escape characters, regex
+"warning" = "orange"
+"constant.character.escape" = { fg = "cyan" }
+
+# strings
+"string" = "green"
+
+# integer, floating point
+"constant.numeric" = "orange"
+
+# vcs
+"diff.plus" = "green"
+"diff.delta" = "orange"
+"diff.minus" = "red"
+
+# make diagnostic underlined, to distinguish with selection text
+"diagnostic.warning" = { underline = { color = "orange", style = "curl" } }
+"diagnostic.error" = { underline = { color = "red", style = "curl" } }
+"diagnostic.info" = { underline = { color = "fg", style = "curl" } }
+"diagnostic.hint" = { underline = { color = "fg", style = "curl" } }
+"diagnostic.unnecessary" = { modifiers = ["dim"] }
+"diagnostic.deprecated" = { modifiers = ["crossed_out"] }
+
+# markup highlight
+"markup.heading" = "cyan"
+"markup.raw" = "green"
+"markup.raw.inline" = "green"
+"markup.bold" = { fg = "orange", modifiers = ["bold"] }
+"markup.italic" = { fg = "orange", modifiers = ["italic"] }
+"markup.strikethrough" = { modifiers = ["crossed_out"] }
+"markup.link.url" = { fg = "blue", modifiers = ["underlined"] }
+"markup.link.text" = "yellow"
+"markup.quote" = "comment"
+
+[palette]
+# a11y syntax colors
+"red" = "#ffa07a"
+"orange" = "#f5ab32"
+"yellow" = "#ffd700"
+"green" = "#abe338"
+"blue" = "#6bbeff"
+"purple" = "#dcc6e0"
+"cyan" = "#00e0e0"
+"comment" = "#d4d0ab"
+# base colors
+"bg" = "#2b2b2b"
+"bg1" = "#313131"
+"bg2" = "#3a3a3a"
+"bg3" = "#474747"
+"gray" = "#545454"
+"muted" = "#808080"
+"fg" = "#f8f8f2"

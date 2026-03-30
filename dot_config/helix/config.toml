@@ -1,5 +1,6 @@
-theme = "gruvbox_light_custom"
-# theme = "wolf-alabaster-light-bg"
+[theme]
+dark = "a11y_dark"
+light = "a11y_light"
 
 [editor]
 bufferline = "multiple"

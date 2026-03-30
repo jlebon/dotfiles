@@ -1,7 +1,7 @@
 # Make Ctrl-[ emit ESC (some keyboard layouts or environments
 # may not send ESC by default for this combination)
 keybind = ctrl+[=text:\x1b
-theme = gruvbox-light-custom
+theme = light:a11y-light,dark:a11y-dark
 
 # Hide mouse cursor while typing; reappears on mouse movement/click
 mouse-hide-while-typing = true

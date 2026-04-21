@@ -109,7 +109,6 @@
 [interactive]
 	diffFilter = delta --color-only
 [delta]
-	light = true
     line-numbers = true
 	navigate = true # use n and N to move between diff sections
 	file-decoration-style = blue box bold

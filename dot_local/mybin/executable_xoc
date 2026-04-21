@@ -32,6 +32,7 @@ run_bash=false
 custom_image=""
 mount_oci_auth=false
 mount_kube=false
+mount_host_ca_certs=false
 host_cgroupns=false
 net_mode=""
 clean_volumes=false
@@ -50,6 +51,7 @@ Options:
   --image IMG   Use a custom container image
   --oci-auth    Mount Docker config (~/.docker/config.json)
   --kube        Mount Kubernetes config (~/.kube/config)
+  --host-ca-certs Mount host CA certificates (/etc/pki/ca-trust)
   --host-cgroupns Use host cgroup namespace
   --net MODE    Set network mode (passed to podman --net)
   --add-dir DIR Add a directory to the container (passes --add-dir to claude)
@@ -95,6 +97,10 @@ while [ $# -gt 0 ]; do
             ;;
         --kube)
             mount_kube=true
+            shift
+            ;;
+        --host-ca-certs)
+            mount_host_ca_certs=true
             shift
             ;;
         --host-cgroupns)
@@ -316,6 +322,10 @@ fi
 
 if [ "${mount_kube}" = "true" ]; then
     podman_args+=(-v "${HOME}/.kube/config:${HOME}/.kube/config:ro")
+fi
+
+if [ "${mount_host_ca_certs}" = "true" ]; then
+    podman_args+=(-v /etc/pki/ca-trust:/etc/pki/ca-trust:ro)
 fi
 
 podman_args+=(-v "/srv/imgs:/run/host/srv/imgs:rw")

@@ -1,4 +1,8 @@
 {
   "$schema": "https://opencode.ai/tui.json",
-  "theme": "a11y"
+  "theme": "a11y",
+  "keybinds": {
+    "input_undo": "alt+z",
+    "terminal_suspend": "none"
+  }
 }

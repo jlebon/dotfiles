@@ -11,6 +11,10 @@ podman pull quay.io/jlebon/pet
 
 echo "Creating pet container"
 toolbox create --image quay.io/jlebon/pet
+
+# XXX until we move to f44; so that we have adaptive theme support
+toolbox run -c pet sudo dnf install -y /var/home/jlebon/Code/src.fedoraproject.org/rpms/tmux/x86_64/tmux-3.6a-1.fc43.x86_64.rpm
+
 toolbox run -c pet tmux new-session -d
 
 # Code may try to resolve the default 'toolbox' hostname for real, which makes

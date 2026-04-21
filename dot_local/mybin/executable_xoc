@@ -30,7 +30,6 @@ tool_args=()
 git_mount_mode=ro
 run_bash=false
 custom_image=""
-mount_glab=false
 mount_oci_auth=false
 mount_kube=false
 host_cgroupns=false
@@ -49,7 +48,6 @@ Options:
   --git-rw      Mount .git directory read-write (default: read-only)
   --bash        Run bash instead of claude/opencode
   --image IMG   Use a custom container image
-  --glab        Mount GitLab CLI config
   --oci-auth    Mount Docker config (~/.docker/config.json)
   --kube        Mount Kubernetes config (~/.kube/config)
   --host-cgroupns Use host cgroup namespace
@@ -90,10 +88,6 @@ while [ $# -gt 0 ]; do
             fi
             custom_image="$2"
             shift 2
-            ;;
-        --glab)
-            mount_glab=true
-            shift
             ;;
         --oci-auth)
             mount_oci_auth=true
@@ -312,9 +306,9 @@ GITHUB_TOKEN=$(secret-tool lookup github-cli-read-only token)
 export GITHUB_TOKEN
 podman_args+=(--env GITHUB_TOKEN)
 
-if [ "${mount_glab}" = "true" ]; then
-    podman_args+=(-v "${HOME}/.config/glab-cli/config.yml:${HOME}/.config/glab-cli/config.yml:ro")
-fi
+GITLAB_TOKEN=$(secret-tool lookup gitlab-cli-read-only token)
+export GITLAB_TOKEN
+podman_args+=(--env GITLAB_TOKEN)
 
 if [ "${mount_oci_auth}" = "true" ]; then
     podman_args+=(-v "${HOME}/.docker/config.json:${HOME}/.docker/config.json:ro")
@@ -405,7 +399,7 @@ else
     fi
 fi
 
-HOST_SPAWN_ENV="${HOST_SPAWN_ENV},GITHUB_TOKEN"
+HOST_SPAWN_ENV="${HOST_SPAWN_ENV},GITHUB_TOKEN,GITLAB_TOKEN"
 
 # cargo env vars - pass through all CARGO_* variables
 while IFS='=' read -r var _; do

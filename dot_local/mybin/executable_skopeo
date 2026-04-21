@@ -20,4 +20,18 @@ if [ -z "${DISABLE_SKOPEO_WRAPPER:-}" ] && \
         HOST_SPAWN="host-spawn -no-pty -env REGISTRY_AUTH_FILE"
 fi
 
+# Use the alternate screen for subcommands with progress bar output to avoid
+# polluting the scrollback history. Set HOST_SPAWN_NO_ALTSCREEN=1 to disable.
+use_altscreen=
+if [ -z "${HOST_SPAWN_NO_ALTSCREEN:-}" ] && [ -t 2 ] && [ "${1:-}" = "copy" ]; then
+        use_altscreen=1
+fi
+
+if [ -n "${use_altscreen}" ]; then
+        printf '\033[?1049h' >&2
+        trap 'printf "\033[?1049l" >&2' EXIT
+        $HOST_SPAWN /usr/bin/skopeo "$@"
+        exit $?
+fi
+
 exec $HOST_SPAWN /usr/bin/skopeo "$@"

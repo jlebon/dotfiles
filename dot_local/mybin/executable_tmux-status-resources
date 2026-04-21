@@ -1,0 +1,34 @@
+#!/bin/bash
+set -euo pipefail
+
+# Thresholds (percentage used)
+WARN=80   # yellow when ≥80%
+CRIT=90   # red when ≥90%
+
+COLOR_GREEN="#00e000"
+COLOR_YELLOW="#e0e000"
+COLOR_RED="#e00000"
+
+pick_color() {
+    local pct=$1
+    if [ "$pct" -ge "$CRIT" ]; then
+        echo "$COLOR_RED"
+    elif [ "$pct" -ge "$WARN" ]; then
+        echo "$COLOR_YELLOW"
+    else
+        echo "$COLOR_GREEN"
+    fi
+}
+
+# Disk usage for /
+disk_pct=$(df --output=pcent / | tail -1 | tr -d ' %')
+
+# RAM usage from /proc/meminfo
+mem_total=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+mem_available=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)
+ram_pct=$(( (mem_total - mem_available) * 100 / mem_total ))
+
+# Output with fixed-width padding, reset to default after
+printf '#[fg=%s]⛃%3d%% #[fg=%s]▤%3d%%#[default] | ' \
+    "$(pick_color "$disk_pct")" "$disk_pct" \
+    "$(pick_color "$ram_pct")" "$ram_pct"

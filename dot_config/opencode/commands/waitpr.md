@@ -8,6 +8,7 @@ The argument is an optional PR URL. If not provided, use `gh pr view
 Detect the PR type from the URL:
 
 - **GitHub** (`github.com`): use `gh` commands as described below.
+- **GitLab** (`gitlab.com`): use `glab` commands as described below.
 - **Pagure** (`src.fedoraproject.org`): use the Pagure REST API as
   described below.
 
@@ -17,7 +18,7 @@ conditions is met:
 1. The PR is merged
 2. Any CI check has failed
 3. All CI checks have passed
-4. (GitHub only) The number of reviews has increased
+4. (GitHub/GitLab) The number of reviews/approvals has increased
 
 When a condition is met, report what happened concisely. If it was a
 CI failure, show which checks failed and link to their logs.
@@ -34,6 +35,31 @@ initial).
 
 If a new review is found, fetch and display the review details and any
 inline comments.
+
+## GitLab
+
+Use `glab mr view <URL> --output json` to get MR details in a single
+call. Extract `project_id`, `iid`, `state`, and `head_pipeline` from
+the JSON. Record the initial approval count using
+`glab api projects/{project_id}/merge_requests/{iid}/approvals` and
+inspect the `approved_by` array length.
+
+Check for merge: inspect the `state` field from `glab mr view`
+(`merged`, `closed`, `opened`).
+
+Check CI: inspect `head_pipeline.status` from the MR JSON. Possible
+values include `running`, `pending`, `success`, `failed`, `canceled`.
+If the pipeline status is `running`, also fetch individual job
+statuses via
+`glab api projects/{project_id}/pipelines/{pipeline_id}/jobs` and
+check if any job has `status` = `failed` (the pipeline-level status
+only changes to `failed` after all jobs finish, but individual jobs
+can fail earlier). If the pipeline has failed (or any job has failed),
+report which jobs failed with their `web_url`.
+
+Check reviews: compare the current `approved_by` array length from the
+approvals API to the initial count. If it increased, fetch and display
+the new approval details.
 
 ## Pagure
 

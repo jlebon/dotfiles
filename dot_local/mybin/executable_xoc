@@ -227,7 +227,7 @@ podman_args+=(
     -v "${HOME}/.cache"
     -v "${HOME}/.cargo:${HOME}/.cargo"
     -v "${HOME}/.rustup:${HOME}/.rustup:ro"
-    -v "${HOME}"/Code/nodejs:"${HOME}"/Code/nodejs:O
+    -v "${HOME}"/Code/nodejs:"${HOME}"/Code/nodejs:ro
     -v "${HOME}"/.local/mybin:"${HOME}"/.local/mybin:ro
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:ro
     -v "${HOME}"/.config/helix:"${HOME}"/.config/helix:ro

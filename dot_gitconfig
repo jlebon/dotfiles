@@ -109,7 +109,9 @@
 [interactive]
 	diffFilter = delta --color-only
 [delta]
-    line-numbers = true
+    # dark = true
+	# syntax-theme = Monokai Extended Light
+	line-numbers = true
 	navigate = true # use n and N to move between diff sections
 	file-decoration-style = blue box bold
 	hunk-header-decoration-style = hidden

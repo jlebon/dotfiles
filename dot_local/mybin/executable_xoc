@@ -5,10 +5,11 @@ shopt -s inherit_errexit
 # Detect invocation mode based on how we were called
 case "$(basename "$0")" in
     xoc) mode=opencode ;;
+    xpi) mode=pi ;;
     *)   mode=claude ;;
 esac
 
-# Run claude/opencode in an unprivileged container using the same container
+# Run claude/opencode/pi in an unprivileged container using the same container
 # image in which we're running. The primary use case is a pet container image
 # you've customized with various dev tools, and you want Claude/OpenCode to
 # be able to use those tools as well in --dangerously-skip-permissions mode.
@@ -42,12 +43,12 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS] [-- ARGS...]
 
-Run claude/opencode in an unprivileged container.
+Run claude/opencode/pi in an unprivileged container.
 
 Options:
   -h            Show this help message
   --git-rw      Mount .git directory read-write (default: read-only)
-  --bash        Run bash instead of claude/opencode
+  --bash        Run bash instead of claude/opencode/pi
   --image IMG   Use a custom container image
   --oci-auth    Mount Docker config (~/.docker/config.json)
   --kube        Mount Kubernetes config (~/.kube/config)
@@ -59,7 +60,9 @@ Options:
   -v VOLUME     Add an extra volume mount
   --clean       Remove existing named volumes before starting
   --allow-no-git Allow starting in a directory that is not a git repo
-  --update      Force an opencode update (opencode mode only)
+  --update      Force an update (opencode/pi modes)
+  --web         Run in web server mode (opencode only); serves UI on LAN
+  --port PORT   Port for web server (default: 4096; implies --web)
   --            Stop parsing options; remaining args passed to tool
 EOF
 }
@@ -241,6 +244,13 @@ if [ "${mode}" = "claude" ]; then
         -v "${HOME}"/.claude.json:"${HOME}"/.claude.json
         -v "${HOME}"/.claude:"${HOME}"/.claude
     )
+elif [ "${mode}" = "pi" ]; then
+    podman_args+=(
+        -v "${HOME}"/.pi:"${HOME}"/.pi
+    )
+    if [ -f "${HOME}/.config/opencode/AGENTS.md" ]; then
+        podman_args+=(-v "${HOME}/.config/opencode/AGENTS.md:${HOME}/.pi/agent/AGENTS.md:ro")
+    fi
 else
     podman_args+=(
         -v "${HOME}"/.opencode:"${HOME}"/.opencode
@@ -363,16 +373,8 @@ fi
 # shellcheck disable=SC1090
 source ~/"Documents/Red Hat/claude-env.sh"
 
-if [ "${mode}" = "claude" ]; then
-    podman_args+=(
-        --env CLAUDE_CODE_USE_VERTEX
-        --env CLOUD_ML_REGION
-        --env ANTHROPIC_VERTEX_PROJECT_ID
-        --env DISABLE_AUTOUPDATER=1
-    )
-    HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
-else
-    # Build runtime context instructions for OpenCode
+# Build runtime context instructions for pi and opencode modes
+if [ "${mode}" != "claude" ]; then
     context="# Runtime Context\n"
     if [ "${git_mount_mode}" = "rw" ]; then
         context+="- You have read-write access to the git repo.\n"
@@ -393,7 +395,25 @@ else
     fi
     context_file=$(mktemp -p "${XDG_RUNTIME_DIR}")
     echo -e "${context}" > "${context_file}"
+fi
 
+if [ "${mode}" = "claude" ]; then
+    podman_args+=(
+        --env CLAUDE_CODE_USE_VERTEX
+        --env CLOUD_ML_REGION
+        --env ANTHROPIC_VERTEX_PROJECT_ID
+        --env DISABLE_AUTOUPDATER=1
+    )
+    HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
+elif [ "${mode}" = "pi" ]; then
+    podman_args+=(
+        --env GOOGLE_CLOUD_PROJECT
+        --env GOOGLE_CLOUD_LOCATION
+        --env PI_OFFLINE=1
+        -v "${context_file}:/run/pi-context.md:ro"
+    )
+    HOST_SPAWN_ENV=GOOGLE_CLOUD_PROJECT,GOOGLE_CLOUD_LOCATION
+else
     podman_args+=(
         --env VERTEX_REGION
         --env GOOGLE_CLOUD_PROJECT
@@ -457,6 +477,20 @@ elif [ "${mode}" = "claude" ]; then
         --dangerously-skip-permissions
     )
     podman "${podman_args[@]}" "${tool_args[@]}"
+elif [ "${mode}" = "pi" ]; then
+    podman "${podman_args[@]}" bash -c '
+force_update="$1"; shift
+bin="$HOME/.pi/pi"
+if [ -f "$bin" ]; then
+    current=$("$bin" -v 2>/dev/null || echo "")
+    latest=$(curl -sL https://api.github.com/repos/badlogic/pi-mono/releases/latest | jq -r ".tag_name" | sed "s/^v//")
+    if [ -n "$latest" ] && [ -n "$current" ] && { [ "$force_update" = "true" ] || [ "$current" != "$latest" ]; }; then
+        echo "Updating pi from $current to $latest..."
+        curl -sL "https://github.com/badlogic/pi-mono/releases/download/v${latest}/pi-linux-x64.tar.gz" \
+            | tar xz -C "$HOME/.pi" --strip-components=1
+    fi
+fi
+exec "$bin" --append-system-prompt /run/pi-context.md "$@"' -- "${force_update}" "${tool_args[@]}"
 else
     podman "${podman_args[@]}" bash -c '
 force_update="$1"; shift

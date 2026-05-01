@@ -18,7 +18,7 @@ current_window=$(tmux display-message -p '#{window_id}')
 # Find all claude/opencode containers and look for one matching our window
 target_pane=""
 container_type=""
-for label in claude opencode; do
+for label in claude opencode pi; do
     while read -r container_id; do
         [ -z "$container_id" ] && continue
         window_label=$(podman inspect --format '{{index .Config.Labels "TMUX_WINDOW"}}' "$container_id")

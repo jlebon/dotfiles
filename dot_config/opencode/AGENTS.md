@@ -13,10 +13,11 @@
 - When running `git rebase --continue`, you MUST set `GIT_EDITOR=true` to
   avoid opening an interactive editor (which will fail in this environment).
 - When writing git messages:
-  - You MUST add "Assisted-by: OpenCode (MODEL)" trailers, where MODEL is the friendly model name. You MUST NOT include the API codename.
+  - You MUST add "Assisted-by: OpenCode (MODEL)" or "Assisted-by: Pi (MODEL)" trailers, where MODEL is the friendly model name. You MUST NOT include the API codename.
     - GOOD: "Assisted-by: OpenCode (Claude Opus 4.6)"
+    - GOOD: "Assisted-by: Pi (Claude Opus 4.5)"
     - BAD: "Assisted-by: OpenCode (Claude Opus 4)"
-    - BAD: "Assisted-by: OpenCode (claude-opus-4-5@20251101)"
+    - BAD: "Assisted-by: Pi (claude-opus-4-5@20251101)"
   - If you know why the change is being made, you MUST focus on the "why", not the "what".
   - If you don't know why the change is being made, you MUST NOT invent a reason.
   - You MUST summarize the "what" using prose, not bullet points.

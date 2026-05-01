@@ -1,6 +1,6 @@
 ---
 name: reorder-functions
-description: Reorder functions in canonical order: public functions by data flow (constructor first, cleanup last), then private functions in depth-first call order.
+description: Reorder functions in canonical order; public functions by data flow (constructor first, cleanup last), then private functions in depth-first call order.
 ---
 
 # Reorder Functions in Canonical Order

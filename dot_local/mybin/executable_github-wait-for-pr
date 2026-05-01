@@ -1,0 +1,109 @@
+#!/bin/bash
+set -euo pipefail
+
+# Polls a GitHub PR's CI checks and exits when all checks pass or any
+# check fails. Accepts an optional PR URL; defaults to the PR for the
+# current branch.
+
+POLLING_INTERVAL_SECS=30
+TIMEOUT_SECS=1200
+
+main() {
+    if [ $# -gt 1 ]; then
+        echo "Usage: $(basename "$0") [PR_URL]" >&2
+        return 1
+    fi
+
+    local pr_ref="${1:-}"
+    local pr_url
+    if [ -n "${pr_ref}" ]; then
+        pr_url="${pr_ref}"
+    else
+        pr_url=$(gh pr view --json url --jq .url) || {
+            echo "error: not on a PR branch and no PR URL provided" >&2
+            return 1
+        }
+    fi
+
+    echo "Watching CI for ${pr_url}..."
+
+    local start_time
+    start_time=$(date +%s)
+
+    while true; do
+        local status
+        status=$(check_ci "${pr_url}")
+        case "${status}" in
+            pass)
+                echo
+                echo "All CI checks passed."
+                return 0
+                ;;
+            fail)
+                echo
+                echo "CI failure detected!"
+                show_failures "${pr_url}"
+                return 1
+                ;;
+            pending)
+                check_timeout "${start_time}"
+                echo -n "."
+                sleep "${POLLING_INTERVAL_SECS}"
+                ;;
+        esac
+    done
+}
+
+check_ci() {
+    local pr_url=$1; shift
+    local checks
+    checks=$(gh pr checks "${pr_url}" --json bucket 2>/dev/null) || {
+        echo "pending"
+        return
+    }
+
+    local total
+    total=$(echo "${checks}" | jq length)
+    if [ "${total}" -eq 0 ]; then
+        echo "pending"
+        return
+    fi
+
+    local failed
+    failed=$(echo "${checks}" | jq '[.[] | select(.bucket == "fail")] | length')
+    if [ "${failed}" -gt 0 ]; then
+        echo "fail"
+        return
+    fi
+
+    local pending
+    pending=$(echo "${checks}" | jq '[.[] | select(.bucket == "pending")] | length')
+    if [ "${pending}" -gt 0 ]; then
+        echo "pending"
+        return
+    fi
+
+    echo "pass"
+}
+
+show_failures() {
+    local pr_url=$1; shift
+    local checks
+    checks=$(gh pr checks "${pr_url}" --json name,bucket,detailsUrl) || return
+
+    echo "Failed checks:"
+    echo "${checks}" | jq -r '.[] | select(.bucket == "fail") | "  \(.name): \(.detailsUrl)"'
+}
+
+check_timeout() {
+    local start_time=$1; shift
+    local elapsed
+    elapsed=$(( $(date +%s) - start_time ))
+    if [ "${elapsed}" -ge "${TIMEOUT_SECS}" ]; then
+        echo
+        echo "error: timed out after $(( TIMEOUT_SECS / 60 )) minutes waiting for CI" >&2
+        return 1
+    fi
+}
+
+main "$@"

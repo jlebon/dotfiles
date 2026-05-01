@@ -11,7 +11,7 @@ esac
 
 # Run claude/opencode/pi in an unprivileged container using the same container
 # image in which we're running. The primary use case is a pet container image
-# you've customized with various dev tools, and you want Claude/OpenCode to
+# you've customized with various dev tools, and you want Claude/OpenCode/Pi to
 # be able to use those tools as well in --dangerously-skip-permissions mode.
 # Note this runs `podman`; in my case, `podman` is actually ~/.local/mybin/podman
 # and just proxies to the real host podman via `host-spawn`. That wrapper is
@@ -234,6 +234,7 @@ podman_args+=(
     -v "${HOME}"/.local/mybin:"${HOME}"/.local/mybin:ro
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:ro
     -v "${HOME}"/.config/helix:"${HOME}"/.config/helix:ro
+    -v "${HOME}"/.agents:"${HOME}"/.agents:ro
     -v "${PWD}":"${PWD}"
     -w "${PWD}"
 )
@@ -358,7 +359,7 @@ fi
 hostd_pid=""
 if [ -n "${TMUX_PANE:-}" ]; then
     hostd_sock_file=$(mktemp)
-    setpriv --pdeathsig TERM hostexec serve --write-socket-path-to "${hostd_sock_file}" &
+    env -u GITHUB_TOKEN -u GITLAB_TOKEN setpriv --pdeathsig TERM hostexec serve --write-socket-path-to "${hostd_sock_file}" &
     hostd_pid=$!
     # wait for the socket path to be written
     while [ ! -s "${hostd_sock_file}" ]; do sleep 0.1; done

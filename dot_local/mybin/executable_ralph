@@ -126,13 +126,13 @@ if [ -n "${guidance_file}" ] && [ ! -f "${guidance_file}" ]; then
     exit 1
 fi
 
-# Resolve tool: prefer xoc (opencode-in-container wrapper), fall back to opencode
-if command -v xoc &>/dev/null; then
-    tool=xoc
+# Resolve tool: prefer xagent (opencode-in-container wrapper), fall back to opencode
+if command -v xagent &>/dev/null; then
+    tool=xagent
 elif command -v opencode &>/dev/null; then
     tool=opencode
 else
-    echo "ERROR: neither xoc nor opencode found in PATH" >&2
+    echo "ERROR: neither xagent nor opencode found in PATH" >&2
     exit 1
 fi
 

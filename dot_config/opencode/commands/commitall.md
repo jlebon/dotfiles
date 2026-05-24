@@ -21,7 +21,7 @@ or purpose.
 
 4. Plan the commits: group related changes into logical units. A single file
    may need to be split across multiple commits if it contains unrelated
-   changes (e.g. `xoc` with multiple independent features). Write the plan
+   changes (e.g. `xagent` with multiple independent features). Write the plan
    using the TodoWrite tool.
 
 5. Execute the commits in dependency order (simple whole-file commits first,

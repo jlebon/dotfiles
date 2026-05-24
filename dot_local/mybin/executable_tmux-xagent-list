@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+
+# List all AI assistant panes in the current (or specified) tmux window.
+# Output format: one "pane_id:type:pane_index" line per agent found.
+
+window=${1:-$(tmux display-message -p '#{window_id}')}
+
+for label in claude opencode pi; do
+    while read -r container_id; do
+        [ -z "$container_id" ] && continue
+        window_label=$(podman inspect --format '{{index .Config.Labels "TMUX_WINDOW"}}' "$container_id")
+        if [ "$window_label" = "$window" ]; then
+            pane=$(podman inspect --format '{{index .Config.Labels "TMUX_PANE"}}' "$container_id")
+            index=$(tmux display-message -p -t "$pane" '#{pane_index}')
+            echo "${pane}:${label}:${index}"
+        fi
+    done < <(podman ps --filter=label="${label}=1" --format '{{.ID}}')
+done

@@ -4,7 +4,7 @@ shopt -s inherit_errexit
 
 # Detect invocation mode based on how we were called
 case "$(basename "$0")" in
-    xoc) mode=opencode ;;
+    xoc|xagent) mode=opencode ;;
     xpi) mode=pi ;;
     *)   mode=claude ;;
 esac
@@ -194,7 +194,7 @@ mount_target_symlink() {
 # Generate volume prefix from working directory for named volumes
 vol_hash=$(echo "$PWD" | md5sum | cut -c1-8)
 vol_slug=$(basename "$PWD" | tr -cs 'a-zA-Z0-9' '-' | sed 's/-$//')
-vol_prefix="xclaude-${vol_hash}-${vol_slug}"
+vol_prefix="xagent-${vol_hash}-${vol_slug}"
 
 # Clean up existing volumes if requested
 if [ "${clean_volumes}" = "true" ]; then
@@ -229,7 +229,9 @@ podman_args+=(
     --tz local
     -v "${HOME}/.cache"
     -v "${HOME}/.cargo:${HOME}/.cargo"
+    -v "${HOME}/.cargo/bin:${HOME}/.cargo/bin:ro"
     -v "${HOME}/.rustup:${HOME}/.rustup:ro"
+    -v "${HOME}"/Code/go/bin:"${HOME}"/Code/go/bin:ro
     -v "${HOME}"/Code/nodejs:"${HOME}"/Code/nodejs:ro
     -v "${HOME}"/.local/mybin:"${HOME}"/.local/mybin:ro
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:ro
@@ -249,9 +251,6 @@ elif [ "${mode}" = "pi" ]; then
     podman_args+=(
         -v "${HOME}"/.pi:"${HOME}"/.pi
     )
-    if [ -f "${HOME}/.config/opencode/AGENTS.md" ]; then
-        podman_args+=(-v "${HOME}/.config/opencode/AGENTS.md:${HOME}/.pi/agent/AGENTS.md:ro")
-    fi
 else
     podman_args+=(
         -v "${HOME}"/.opencode:"${HOME}"/.opencode
@@ -319,11 +318,25 @@ for vol in "${extra_volumes[@]}"; do
     podman_args+=(-v "${vol}")
 done
 
-GITHUB_TOKEN=$(secret-tool lookup github-cli-read-only token)
+# secret-tool can sometimes flake; retry a few times
+secret-tool-retry() {
+    local retries=3
+    for ((i=1; i<=retries; i++)); do
+        if result=$(secret-tool "$@") && [ -n "${result}" ]; then
+            echo "${result}"
+            return 0
+        fi
+        sleep 1
+    done
+    echo "ERROR: secret-tool $* failed after ${retries} retries" >&2
+    return 1
+}
+
+GITHUB_TOKEN=$(secret-tool-retry lookup github-cli-read-only token)
 export GITHUB_TOKEN
 podman_args+=(--env GITHUB_TOKEN)
 
-GITLAB_TOKEN=$(secret-tool lookup gitlab-cli-read-only token)
+GITLAB_TOKEN=$(secret-tool-retry lookup gitlab-cli-read-only token)
 export GITLAB_TOKEN
 podman_args+=(--env GITLAB_TOKEN)
 
@@ -411,6 +424,7 @@ elif [ "${mode}" = "pi" ]; then
         --env GOOGLE_CLOUD_PROJECT
         --env GOOGLE_CLOUD_LOCATION
         --env PI_OFFLINE=1
+        --env PATH="${HOME}/.pi:${PATH}"
         -v "${context_file}:/run/pi-context.md:ro"
     )
     HOST_SPAWN_ENV=GOOGLE_CLOUD_PROJECT,GOOGLE_CLOUD_LOCATION
@@ -470,16 +484,24 @@ trap cleanup EXIT
 
 # and the actual image and command
 podman_args+=("${imageid}")
+# Start podman API socket inside the container. Without systemd, there's no
+# socket activation, so tools using the podman Go bindings (e.g. bink) need the
+# service running. The --init flag (catatonit) keeps it alive after exec.
+podman_svc='mkdir -p /run/podman; podman system service --time=0 unix:///run/podman/podman.sock &>/dev/null &'
+
 if [ "${run_bash}" = "true" ]; then
-    podman "${podman_args[@]}" bash
+    podman "${podman_args[@]}" bash -c "${podman_svc}
+    exec bash"
 elif [ "${mode}" = "claude" ]; then
     podman_args+=(
+        bash -c "${podman_svc}; exec \"\$@\"" --
         "${HOME}"/Code/nodejs/bin/claude
         --dangerously-skip-permissions
     )
     podman "${podman_args[@]}" "${tool_args[@]}"
 elif [ "${mode}" = "pi" ]; then
     podman "${podman_args[@]}" bash -c '
+'"${podman_svc}"'
 force_update="$1"; shift
 bin="$HOME/.pi/pi"
 if [ -f "$bin" ]; then
@@ -488,12 +510,13 @@ if [ -f "$bin" ]; then
     if [ -n "$latest" ] && [ -n "$current" ] && { [ "$force_update" = "true" ] || [ "$current" != "$latest" ]; }; then
         echo "Updating pi from $current to $latest..."
         curl -sL "https://github.com/badlogic/pi-mono/releases/download/v${latest}/pi-linux-x64.tar.gz" \
-            | tar xz -C "$HOME/.pi" --strip-components=1
+            | tar xz -C "$HOME/.pi" --strip-components=1 --no-same-owner
     fi
 fi
 exec "$bin" --append-system-prompt /run/pi-context.md "$@"' -- "${force_update}" "${tool_args[@]}"
 else
     podman "${podman_args[@]}" bash -c '
+'"${podman_svc}"'
 force_update="$1"; shift
 bin="$HOME/.opencode/bin/opencode"
 if [ -f "$bin" ]; then

@@ -43,7 +43,14 @@ def parse_args():
 
     parser = argparse.ArgumentParser(
         prog="git addhunks",
-        description="Stage specific changes by line number in `git diff` output."
+        description="Stage specific changes by line number in `git diff` output.",
+        epilog=(
+            "Line number targeting:\n"
+            "  +/- line      → selects its contiguous change group\n"
+            "  context/@@    → selects the entire hunk\n"
+            "  file header   → selects all hunks for that file"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('line_numbers', metavar='LINE', type=int, nargs='+',
                         help="Line numbers in `git diff` output to stage")

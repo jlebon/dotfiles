@@ -1,6 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+# Detect dark/light mode and set BAT_THEME for delta (which can't
+# auto-detect when running inside fzf's preview pane)
+if [[ "$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null)" == *dark* ]]; then
+    export BAT_THEME='Monokai Extended'
+else
+    export BAT_THEME='GitHub'
+fi
+
 ## Navigation:
 ## 
 ## Select up/down                   Ctrl-K, Ctrl-J

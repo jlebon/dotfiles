@@ -1,0 +1,8 @@
+# Solarized Light Custom
+# Consistent with ghostty and opencode solarized-light-custom themes
+
+inherits = "solarized_light"
+
+# Use reversed cursor (adapts to underlying text colors)
+"ui.cursor.primary" = { modifiers = ["reversed"] }
+"ui.cursor.match" = { bg = "base02" }

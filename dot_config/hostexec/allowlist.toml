@@ -1,0 +1,11 @@
+[[allow]]
+cmd = ["rhjira", "list"]
+type = "prefix"
+
+[[allow]]
+cmd = ["rhjira", "show"]
+type = "prefix"
+
+[[allow]]
+cmd = ["rhjira", "dump"]
+type = "prefix"

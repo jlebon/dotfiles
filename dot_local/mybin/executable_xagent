@@ -4,7 +4,7 @@ shopt -s inherit_errexit
 
 # Detect invocation mode based on how we were called
 case "$(basename "$0")" in
-    xoc|xagent) mode=opencode ;;
+    xoc) mode=opencode ;;
     xpi) mode=pi ;;
     *) echo "ERROR: unknown mode: $(basename "$0")" >&2; exit 1 ;;
 esac

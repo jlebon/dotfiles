@@ -55,7 +55,7 @@ Options:
   --host-ca-certs Mount host CA certificates (/etc/pki/ca-trust)
   --host-cgroupns Use host cgroup namespace
   --net MODE    Set network mode (passed to podman --net)
-  --add-dir DIR Add a directory to the container (passes --add-dir to claude)
+  --add-dir DIR Add a directory to the container (default: read-only; append :rw/:ro)
   --add-repo R  Add a repo (comma-separated) from ~/Code
   -v VOLUME     Add an extra volume mount
   --clean       Remove existing named volumes before starting
@@ -135,7 +135,7 @@ while [ $# -gt 0 ]; do
                 echo "ERROR: --add-dir requires a directory argument" >&2
                 exit 1
             fi
-            add_dirs+=("$(realpath "$2")")
+            add_dirs+=("$2")
             shift 2
             ;;
         --add-repo)
@@ -271,8 +271,22 @@ if [ -e .git ]; then
     fi
 fi
 
+resolved_dirs=()
+resolved_dir_modes=()
 for dir in "${add_dirs[@]}"; do
-    podman_args+=(-v "${dir}:${dir}")
+    if [[ "${dir}" == *:rw ]]; then
+        dir_mode=rw
+        dir=${dir%:rw}
+    elif [[ "${dir}" == *:ro ]]; then
+        dir_mode=ro
+        dir=${dir%:ro}
+    else
+        dir_mode=ro
+    fi
+    dir=$(realpath "${dir}")
+    resolved_dirs+=("${dir}")
+    resolved_dir_modes+=("${dir_mode}")
+    podman_args+=(-v "${dir}:${dir}:${dir_mode}")
     if [ "${mode}" = "claude" ]; then
         tool_args+=(--add-dir "${dir}")
     fi
@@ -387,10 +401,10 @@ if [ "${mode}" != "claude" ]; then
             context+="  - ${path}\n"
         done
     fi
-    if [ ${#add_dirs[@]} -gt 0 ]; then
+    if [ ${#resolved_dirs[@]} -gt 0 ]; then
         context+="- You have access to the following additional directories:\n"
-        for dir in "${add_dirs[@]}"; do
-            context+="  - ${dir}\n"
+        for i in "${!resolved_dirs[@]}"; do
+            context+="  - ${resolved_dirs[$i]} (${resolved_dir_modes[$i]})\n"
         done
     fi
     context_file=$(mktemp -p "${XDG_RUNTIME_DIR}")

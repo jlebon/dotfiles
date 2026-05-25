@@ -119,6 +119,7 @@ vim.pack.add({
   { src = 'https://github.com/saghen/blink.cmp', version = 'v1' },
   { src = 'https://github.com/folke/flash.nvim' },
   { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
+  { src = 'https://github.com/folke/which-key.nvim' },
 })
 
 -- Colorscheme
@@ -315,6 +316,16 @@ vim.diagnostic.config({
 })
 
 vim.lsp.inlay_hint.enable(true)
+
+-- Which-key
+
+require('which-key').setup({
+  preset = 'helix',
+  spec = {
+    { '<leader>f', group = 'Find' },
+    { '<leader>h', group = 'Hunk' },
+  },
+})
 
 -- LSP progress spinner in the ruler
 local spinner_frames = { '⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷' }

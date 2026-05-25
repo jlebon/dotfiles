@@ -20,12 +20,13 @@ main() {
 
 permalink() {
     if [ $# -lt 1 ]; then
-        echo "Usage: git permalink <FILE> [LINENO]" >&2
+        echo "Usage: git permalink <FILE> [LINENO] [END_LINENO]" >&2
         exit 1
     fi
 
     local file=$1; shift
     local lineno=${1:-}
+    local end_lineno=${2:-}
 
     # make sure it's absolute
     file=$(realpath "${file}")
@@ -54,8 +55,15 @@ permalink() {
     if [ -n "$lineno" ]; then
         if [[ $base == git.kernel.org ]]; then
             lineno="#n${lineno}"
+        elif [[ $base == *pagure* ]] || [[ $base == *fedoraproject.org* ]]; then
+            lineno="#_${lineno}"
         else
-            lineno="#L${lineno}"
+            # GitHub, GitLab, etc.
+            if [ -n "$end_lineno" ] && [ "$end_lineno" != "$lineno" ]; then
+                lineno="#L${lineno}-L${end_lineno}"
+            else
+                lineno="#L${lineno}"
+            fi
         fi
     fi
 

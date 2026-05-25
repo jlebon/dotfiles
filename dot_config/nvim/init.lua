@@ -78,6 +78,35 @@ vim.keymap.set('n', '<leader>tP', function()
   vim.api.nvim_put(vim.split(text, '\n', { trimempty = true }), '', false, true)
 end, { desc = 'Paste from tmux buffer (before)' })
 
+-- Git permalink
+
+local function git_permalink(file, line_start, line_end)
+  local args = {'git', 'permalink', file, tostring(line_start)}
+  if line_end and line_end ~= line_start then
+    table.insert(args, tostring(line_end))
+  end
+  local result = vim.system(args, { text = true }):wait()
+  if result.code ~= 0 then
+    vim.notify('git permalink failed: ' .. (result.stderr or ''), vim.log.levels.ERROR)
+    return
+  end
+  local url = vim.trim(result.stdout)
+  vim.notify(url)
+  vim.system({'xdg-open', url})
+end
+
+vim.keymap.set('n', '<leader>p', function()
+  git_permalink(vim.fn.expand('%:p'), vim.fn.line('.'))
+end, { desc = 'Open git permalink' })
+
+vim.keymap.set('v', '<leader>p', function()
+  local start = vim.fn.getpos('v')[2]
+  local finish = vim.fn.getpos('.')[2]
+  if start > finish then start, finish = finish, start end
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'nx', false)
+  git_permalink(vim.fn.expand('%:p'), start, finish)
+end, { desc = 'Open git permalink (selection)' })
+
 -- AI assistant integration (tmux-xagent)
 
 local ai_cached_agent = nil -- { pane = '...', type = '...' }

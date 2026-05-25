@@ -6,7 +6,7 @@ set -euo pipefail
 
 window=${1:-$(tmux display-message -p '#{window_id}')}
 
-for label in claude opencode pi; do
+for label in opencode pi; do
     while read -r container_id; do
         [ -z "$container_id" ] && continue
         window_label=$(podman inspect --format '{{index .Config.Labels "TMUX_WINDOW"}}' "$container_id")

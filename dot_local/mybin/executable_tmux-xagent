@@ -2,7 +2,7 @@
 set -euo pipefail
 shopt -s inherit_errexit
 
-# Send a query to a claude/opencode instance running in the same tmux window.
+# Send a query to an opencode/pi instance running in the same tmux window.
 #
 # Modes based on how it's called:
 #   tmux-xagent: send file/line context, switch focus (for editor hotkey)
@@ -75,8 +75,7 @@ clear_input() {
         tmux send-keys -t "$target_pane" S-Home
         tmux send-keys -t "$target_pane" BSpace
     else
-        # Claude: Home + Ctrl-K loop
-        # there's Esc Esc also, but that would also stop Claude execution if it's currently working
+        # Pi: Home + Ctrl-K loop
         for _ in {1..10}; do
             tmux send-keys -t "$target_pane" Home
             sleep 0.01

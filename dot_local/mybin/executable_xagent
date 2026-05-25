@@ -6,17 +6,17 @@ shopt -s inherit_errexit
 case "$(basename "$0")" in
     xoc|xagent) mode=opencode ;;
     xpi) mode=pi ;;
-    *)   mode=claude ;;
+    *) echo "ERROR: unknown mode: $(basename "$0")" >&2; exit 1 ;;
 esac
 
-# Run claude/opencode/pi in an unprivileged container using the same container
-# image in which we're running. The primary use case is a pet container image
-# you've customized with various dev tools, and you want Claude/OpenCode/Pi to
-# be able to use those tools as well in --dangerously-skip-permissions mode.
-# Note this runs `podman`; in my case, `podman` is actually ~/.local/mybin/podman
-# and just proxies to the real host podman via `host-spawn`. That wrapper is
-# available in my dotfiles repo as well, but one can probably just change the
-# podman call at the bottom to `flatpak-spawn --host`
+# Run opencode/pi in an unprivileged container using the same container image in
+# which we're running. The primary use case is a pet container image you've
+# customized with various dev tools, and you want OpenCode/Pi to be able to use
+# those tools as well. Note this runs `podman`; in my case, `podman` is actually
+# ~/.local/mybin/podman and just proxies to the real host podman via
+# `host-spawn`. That wrapper is available in my dotfiles repo as well, but one
+# can probably just change the podman call at the bottom to `flatpak-spawn
+# --host`
 
 if [ ! -e "/run/.containerenv" ]; then
     echo "ERROR: Must be run from pet container" >&2
@@ -43,12 +43,12 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS] [-- ARGS...]
 
-Run claude/opencode/pi in an unprivileged container.
+Run opencode/pi in an unprivileged container.
 
 Options:
   -h            Show this help message
   --git-rw      Mount .git directory read-write (default: read-only)
-  --bash        Run bash instead of claude/opencode/pi
+  --bash        Run bash instead of opencode/pi
   --image IMG   Use a custom container image
   --oci-auth    Mount Docker config (~/.docker/config.json)
   --kube        Mount Kubernetes config (~/.kube/config)
@@ -167,17 +167,6 @@ if [ ! -e .git ] && [ -z "${SAFE_PWD:-}" ] && [ "${allow_no_git}" != "true" ]; t
     exit 1
 fi
 
-# Check if there's a newer version of claude-code available
-if [ "${mode}" = "claude" ]; then
-    claude_manifest=~/Code/nodejs/lib/node_modules/\@anthropic-ai/claude-code/package.json
-    current_version=$(jq -r '.version' "${claude_manifest}")
-    latest_version=$(curl -s https://registry.npmjs.org/@anthropic-ai/claude-code/latest | jq -r '.version')
-    if [ -n "${latest_version}" ] && [ "${current_version}" != "${latest_version}" ]; then
-        echo "Updating @anthropic-ai/claude-code from ${current_version} to ${latest_version}..."
-        npm update --prefix ~/Code/nodejs -g @anthropic-ai/claude-code
-    fi
-fi
-
 cd "$(realpath "${PWD}")"
 
 # Generate volume prefix from working directory for named volumes
@@ -231,12 +220,7 @@ podman_args+=(
 )
 
 # Mode-specific mounts
-if [ "${mode}" = "claude" ]; then
-    podman_args+=(
-        -v "${HOME}"/.claude.json:"${HOME}"/.claude.json
-        -v "${HOME}"/.claude:"${HOME}"/.claude
-    )
-elif [ "${mode}" = "pi" ]; then
+if [ "${mode}" = "pi" ]; then
     podman_args+=(
         -v "${HOME}"/.pi:"${HOME}"/.pi
     )
@@ -287,9 +271,6 @@ for dir in "${add_dirs[@]}"; do
     resolved_dirs+=("${dir}")
     resolved_dir_modes+=("${dir_mode}")
     podman_args+=(-v "${dir}:${dir}:${dir_mode}")
-    if [ "${mode}" = "claude" ]; then
-        tool_args+=(--add-dir "${dir}")
-    fi
 done
 
 resolved_repos=()
@@ -308,9 +289,6 @@ for repo in "${add_repos[@]}"; do
     podman_args+=(-v "${repo_path}:${repo_path}:${repo_mode}")
     if [ "${repo_mode}" = "rw" ] && [ -d "${repo_path}/.git" ]; then
         podman_args+=(-v "${repo_path}/.git/config:${repo_path}/.git/config:ro")
-    fi
-    if [ "${mode}" = "claude" ]; then
-        tool_args+=(--add-dir "${repo_path}")
     fi
 done
 
@@ -387,39 +365,29 @@ fi
 # shellcheck disable=SC1090
 source ~/"Documents/Red Hat/claude-env.sh"
 
-# Build runtime context instructions for pi and opencode modes
-if [ "${mode}" != "claude" ]; then
-    context="# Runtime Context\n"
-    if [ "${git_mount_mode}" = "rw" ]; then
-        context+="- You have read-write access to the git repo.\n"
-    else
-        context+="- You have read-only access to the git repo. The .git directory is mounted read-only.\n"
-    fi
-    if [ ${#resolved_repos[@]} -gt 0 ]; then
-        context+="- You have access to the following additional git repos:\n"
-        for path in "${resolved_repos[@]}"; do
-            context+="  - ${path}\n"
-        done
-    fi
-    if [ ${#resolved_dirs[@]} -gt 0 ]; then
-        context+="- You have access to the following additional directories:\n"
-        for i in "${!resolved_dirs[@]}"; do
-            context+="  - ${resolved_dirs[$i]} (${resolved_dir_modes[$i]})\n"
-        done
-    fi
-    context_file=$(mktemp -p "${XDG_RUNTIME_DIR}")
-    echo -e "${context}" > "${context_file}"
+# Build runtime context instructions
+context="# Runtime Context\n"
+if [ "${git_mount_mode}" = "rw" ]; then
+    context+="- You have read-write access to the git repo.\n"
+else
+    context+="- You have read-only access to the git repo. The .git directory is mounted read-only.\n"
 fi
+if [ ${#resolved_repos[@]} -gt 0 ]; then
+    context+="- You have access to the following additional git repos:\n"
+    for path in "${resolved_repos[@]}"; do
+        context+="  - ${path}\n"
+    done
+fi
+if [ ${#resolved_dirs[@]} -gt 0 ]; then
+    context+="- You have access to the following additional directories:\n"
+    for i in "${!resolved_dirs[@]}"; do
+        context+="  - ${resolved_dirs[$i]} (${resolved_dir_modes[$i]})\n"
+    done
+fi
+context_file=$(mktemp -p "${XDG_RUNTIME_DIR}")
+echo -e "${context}" > "${context_file}"
 
-if [ "${mode}" = "claude" ]; then
-    podman_args+=(
-        --env CLAUDE_CODE_USE_VERTEX
-        --env CLOUD_ML_REGION
-        --env ANTHROPIC_VERTEX_PROJECT_ID
-        --env DISABLE_AUTOUPDATER=1
-    )
-    HOST_SPAWN_ENV=CLAUDE_CODE_USE_VERTEX,CLOUD_ML_REGION,ANTHROPIC_VERTEX_PROJECT_ID,DISABLE_AUTOUPDATER
-elif [ "${mode}" = "pi" ]; then
+if [ "${mode}" = "pi" ]; then
     podman_args+=(
         --env GOOGLE_CLOUD_PROJECT
         --env GOOGLE_CLOUD_LOCATION
@@ -464,12 +432,6 @@ done
 
 export HOST_SPAWN_ENV
 
-# claude doesn't like running as root with --dangerously-skip-permissions
-# (there's IS_SANDBOX=1, but then you have to approve a bypass prompt)
-if [ "${mode}" = "claude" ]; then
-    podman_args+=(--userns=keep-id)
-fi
-
 # clean up hostexec on exit
 cleanup() {
     if [ -n "${hostd_pid}" ]; then
@@ -492,13 +454,6 @@ podman_svc='mkdir -p /run/podman; podman system service --time=0 unix:///run/pod
 if [ "${run_bash}" = "true" ]; then
     podman "${podman_args[@]}" bash -c "${podman_svc}
     exec bash"
-elif [ "${mode}" = "claude" ]; then
-    podman_args+=(
-        bash -c "${podman_svc}; exec \"\$@\"" --
-        "${HOME}"/Code/nodejs/bin/claude
-        --dangerously-skip-permissions
-    )
-    podman "${podman_args[@]}" "${tool_args[@]}"
 elif [ "${mode}" = "pi" ]; then
     podman "${podman_args[@]}" bash -c '
 '"${podman_svc}"'

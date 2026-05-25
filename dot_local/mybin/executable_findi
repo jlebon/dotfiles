@@ -37,7 +37,7 @@ fzf --ansi -m \
   --bind 'ctrl-o:execute(findi $(realpath ..))+abort' \
   --bind 'ctrl-d:half-page-down,ctrl-u:half-page-up' \
   --bind 'alt-e:preview-down,alt-y:preview-up,alt-d:preview-half-page-down,alt-u:preview-half-page-up' \
-  --bind 'ctrl-h:execute(hx {+})+abort' \
+  --bind 'ctrl-h:execute(nvim {+})+abort' \
   --bind 'enter:execute(findi {})+abort' \
   --bind 'ctrl-space:execute(bat --color=always {} | less -R)' \
   --bind 'ctrl-/:toggle-preview' \

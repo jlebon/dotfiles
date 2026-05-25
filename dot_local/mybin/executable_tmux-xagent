@@ -10,7 +10,7 @@ shopt -s inherit_errexit
 #   xc:  send just the arguments, press Enter (no file/line prefix)
 #
 # File/line context can be provided via --file/--line arguments. If not
-# provided, falls back to scraping helix's status bar via tmux-helix-bufinfo.
+# provided, falls back to querying nvim's RPC server via tmux-nvim-bufinfo.
 
 export HOST_SPAWN_QUIET=1
 
@@ -37,7 +37,7 @@ get_file() {
     if [ -n "${opt_file}" ]; then
         echo "${opt_file}"
     else
-        tmux-helix-bufinfo file
+        tmux-nvim-bufinfo file
     fi
 }
 
@@ -45,7 +45,7 @@ get_line() {
     if [ -n "${opt_line}" ]; then
         echo "${opt_line}"
     else
-        tmux-helix-bufinfo line
+        tmux-nvim-bufinfo line
     fi
 }
 
@@ -92,7 +92,7 @@ case "$mode" in
         tmux send-keys -t "$target_pane" Enter
         ;;
     xch)
-        # Wait a bit for helix to hide the command box so we can read the status line
+        # Wait a bit for nvim to settle
         if [ -z "${opt_file}" ]; then
             sleep 0.25
         fi

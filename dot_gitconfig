@@ -36,7 +36,7 @@
 	l = log --pretty=oneline
 	la = log --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
 	lg = log --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short
-	# I use this from hx's `pipe` command.
+	# I use this from nvim's `pipe` command.
 	quote = "!f() { : git log; xargs git log -n 1 --pretty=format:'%h (\"%s\")'; }; f"
 	lgi = "!f() { : git log; git log-interactive \"$@\"; }; f"
 	lai = "!f() { : git log; NO_GRAPH=1 git log-interactive \"$@\"; }; f"

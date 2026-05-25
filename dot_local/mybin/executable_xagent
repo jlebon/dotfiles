@@ -221,7 +221,7 @@ podman_args+=(
     -v "${vol_prefix}-var-tmp:/var/tmp"
     -v "${vol_prefix}-tmp:/tmp"
     --label "${mode}=1"
-    --env EDITOR=hx
+    --env EDITOR=nvim
     --env TERM="${TERM}"
     --env PATH="${PATH}"
     --env HOME="${HOME}"
@@ -235,7 +235,7 @@ podman_args+=(
     -v "${HOME}"/Code/nodejs:"${HOME}"/Code/nodejs:ro
     -v "${HOME}"/.local/mybin:"${HOME}"/.local/mybin:ro
     -v "${HOME}"/.config/gcloud:"${HOME}"/.config/gcloud:ro
-    -v "${HOME}"/.config/helix:"${HOME}"/.config/helix:ro
+    -v "${HOME}"/.config/nvim:"${HOME}"/.config/nvim:ro
     -v "${HOME}"/.agents:"${HOME}"/.agents:ro
     -v "${PWD}":"${PWD}"
     -w "${PWD}"

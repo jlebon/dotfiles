@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# XXX: go back to using fd only, but hack around helix wanting to replace by having a larger hardlink count? https://github.com/helix-editor/helix/pull/11340/
-# or maybe just change helix
+# XXX: go back to using fd only, but hack around nvim wanting to replace by having a larger hardlink count?
+# or maybe just change nvim
 
 # Wrapper to edit GPG-encrypted text files. Decrypts the file to a temporary
 # location, opens the configured editor, and re-encrypts the edited file.

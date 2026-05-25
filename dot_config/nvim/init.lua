@@ -54,6 +54,30 @@ vim.api.nvim_create_autocmd('BufRead', {
 vim.g.mapleader = ' '
 
 vim.keymap.set('n', '<leader>w', ':write<CR>', { desc = 'Write' })
+-- Tmux buffer integration
+
+local function tmux_yank(text)
+  vim.fn.system({'tmux', 'load-buffer', '-'}, text)
+end
+
+vim.keymap.set('v', '<leader>ty', function()
+  local start = vim.fn.getpos('v')
+  local finish = vim.fn.getpos('.')
+  local lines = vim.fn.getregion(start, finish, { type = vim.fn.mode() })
+  tmux_yank(table.concat(lines, '\n') .. '\n')
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'nx', false)
+end, { desc = 'Yank selection to tmux buffer' })
+
+vim.keymap.set('n', '<leader>tp', function()
+  local text = vim.fn.system({'tmux', 'show-buffer'})
+  vim.api.nvim_put(vim.split(text, '\n', { trimempty = true }), '', true, true)
+end, { desc = 'Paste from tmux buffer' })
+
+vim.keymap.set('n', '<leader>tP', function()
+  local text = vim.fn.system({'tmux', 'show-buffer'})
+  vim.api.nvim_put(vim.split(text, '\n', { trimempty = true }), '', false, true)
+end, { desc = 'Paste from tmux buffer (before)' })
+
 -- AI assistant integration (tmux-xagent)
 
 local ai_cached_agent = nil -- { pane = '...', type = '...' }
@@ -324,6 +348,7 @@ require('which-key').setup({
   spec = {
     { '<leader>f', group = 'Find' },
     { '<leader>h', group = 'Hunk' },
+    { '<leader>t', group = 'Tmux' },
   },
 })
 

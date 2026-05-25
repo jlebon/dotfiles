@@ -1,8 +1,0 @@
-#!/bin/bash
-set -euo pipefail
-
-target_pane=${1:-$TMUX_PANE}
-f=$(tmux-nvim-bufinfo file "$target_pane")
-l=$(tmux-nvim-bufinfo line "$target_pane")
-url=$(git permalink "$f" "$l")
-${container:+host-spawn} xdg-open "$url"

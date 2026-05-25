@@ -9,8 +9,8 @@ shopt -s inherit_errexit
 #   xch: send file/line context + arguments, press Enter
 #   xc:  send just the arguments, press Enter (no file/line prefix)
 #
-# File/line context can be provided via --file/--line arguments. If not
-# provided, falls back to querying nvim's RPC server via tmux-nvim-bufinfo.
+# File/line context is provided via --file/--line arguments (required for
+# tmux-xagent and xch modes).
 
 export HOST_SPAWN_QUIET=1
 
@@ -32,22 +32,6 @@ while [ $# -gt 0 ]; do
     esac
 done
 set -- "${remaining_args[@]+"${remaining_args[@]}"}"
-
-get_file() {
-    if [ -n "${opt_file}" ]; then
-        echo "${opt_file}"
-    else
-        tmux-nvim-bufinfo file
-    fi
-}
-
-get_line() {
-    if [ -n "${opt_line}" ]; then
-        echo "${opt_line}"
-    else
-        tmux-nvim-bufinfo line
-    fi
-}
 
 if [ -n "$opt_pane" ] && [ -n "$opt_type" ]; then
     target_pane="$opt_pane"
@@ -91,22 +75,22 @@ case "$mode" in
         tmux send-keys -t "$target_pane" Enter
         ;;
     xch)
-        # Wait a bit for nvim to settle
-        if [ -z "${opt_file}" ]; then
-            sleep 0.25
+        if [ -z "${opt_file}" ] || [ -z "${opt_line}" ]; then
+            echo "ERROR: --file and --line are required" >&2
+            exit 1
         fi
-        file=$(get_file)
-        line=$(get_line)
         clear_input
-        tmux send-keys -t "$target_pane" "in file $file at line $line: $*"
+        tmux send-keys -t "$target_pane" "in file ${opt_file} at line ${opt_line}: $*"
         tmux send-keys -t "$target_pane" Enter
         ;;
     *)
         # tmux-xagent: focus mode for editor hotkey
-        file=$(get_file)
-        line=$(get_line)
+        if [ -z "${opt_file}" ] || [ -z "${opt_line}" ]; then
+            echo "ERROR: --file and --line are required" >&2
+            exit 1
+        fi
         clear_input
-        tmux send-keys -t "$target_pane" "in file $file at line $line (reread the file carefully, it may have changed): "
+        tmux send-keys -t "$target_pane" "in file ${opt_file} at line ${opt_line} (reread the file carefully, it may have changed): "
         tmux select-pane -t "$target_pane"
         ;;
 esac

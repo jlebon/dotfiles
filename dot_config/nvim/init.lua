@@ -54,6 +54,7 @@ vim.api.nvim_create_autocmd('BufRead', {
 vim.g.mapleader = ' '
 
 vim.keymap.set('n', '<leader>w', ':write<CR>', { desc = 'Write' })
+vim.keymap.set('n', '<leader>d', ':bdelete<CR>', { desc = 'Delete buffer' })
 -- Tmux buffer integration
 
 local function tmux_yank(text)

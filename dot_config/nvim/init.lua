@@ -169,6 +169,7 @@ vim.pack.add({
   { src = 'https://github.com/neovim/nvim-lspconfig' },
   { src = 'https://github.com/lewis6991/gitsigns.nvim' },
   { src = 'https://github.com/nvim-mini/mini.pick', version = 'stable' },
+  { src = 'https://github.com/nvim-mini/mini.surround', version = 'stable' },
   { src = 'https://github.com/saghen/blink.cmp', version = 'v1' },
   { src = 'https://github.com/folke/flash.nvim' },
   { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
@@ -268,6 +269,22 @@ vim.keymap.set({'n', 'x', 'o'}, 'S', function() require('flash').treesitter() en
 vim.keymap.set('o', 'r', function() require('flash').remote() end, { desc = 'Remote Flash' })
 vim.keymap.set({'o', 'x'}, 'R', function() require('flash').treesitter_search() end, { desc = 'Treesitter Search' })
 vim.keymap.set('c', '<C-s>', function() require('flash').toggle() end, { desc = 'Toggle Flash Search' })
+
+-- Surround (mini.surround)
+-- Use 'gs' prefix since 's' conflicts with flash.nvim ('gs' is useless stock "sleep")
+
+require('mini.surround').setup({
+  mappings = {
+    add = 'gsa',
+    delete = 'gsd',
+    find = 'gsf',
+    find_left = 'gsF',
+    highlight = 'gsh',
+    replace = 'gsr',
+    suffix_last = '',
+    suffix_next = '',
+  },
+})
 
 -- Completion (blink.cmp)
 --

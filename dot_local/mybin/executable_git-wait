@@ -30,7 +30,7 @@ main() {
     sha=$(resolve_remote_ref "${remote}" "${remote_ref}")
 
     local local_sha
-    local_sha=$(git show --format='format:%H' "${ref}")
+    local_sha=$(git log -1 --format='format:%H' "${ref}")
 
     if [ "${sha}" != "${local_sha}" ]; then
         echo "note: local ref is not up to date" >&2

@@ -52,6 +52,7 @@ if [ "${1:-}" = command ]; then
     fi
     
     while IFS= read -r branch; do
+        [[ "$branch" == \(* ]] && continue
         [ "$branch" = "$default_local" ] && continue
         
         branch_sha=$(git rev-parse "$branch")

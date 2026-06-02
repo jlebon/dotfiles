@@ -211,6 +211,7 @@ vim.pack.add({
 vim.g.gruvbox_material_background = 'hard' -- 'hard', 'medium' (default), 'soft'
 vim.g.gruvbox_material_enable_italic = true
 vim.cmd.colorscheme('gruvbox-material')
+vim.api.nvim_set_hl(0, 'LspInlayHint', { link = 'Comment' })
 
 -- Gitsigns
 

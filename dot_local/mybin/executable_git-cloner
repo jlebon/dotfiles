@@ -7,7 +7,8 @@ import subprocess
 from urllib.parse import urlparse
 
 url = sys.argv[1]
-parsed_url = urlparse(sys.argv[1])
+extra_args = sys.argv[2:]
+parsed_url = urlparse(url)
 
 clone_path = f'/home/jlebon/Code/{parsed_url.netloc}{parsed_url.path}'
 clone_path = clone_path.rstrip('/')
@@ -16,5 +17,5 @@ clone_path = clone_path.removesuffix('.git')
 if os.path.isdir(clone_path):
     raise Exception(f"{clone_path} already exists")
 
-subprocess.check_call(['git', 'clone', '-o', 'upstream', url, clone_path])
+subprocess.check_call(['git', 'clone', '-o', 'upstream'] + extra_args + [url, clone_path])
 print(clone_path)

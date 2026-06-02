@@ -39,11 +39,16 @@ elif [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
 	exit 0
 else
 	files=
+	toplevel=$(git rev-parse --show-toplevel)
 	while test $# -gt 0; do
 		if [ -f "$1" ]; then
 			files="$files $1"
 		else
-			files="$files $(git diff-tree --no-commit-id --name-only -r $1)"
+			for file in $(git diff-tree --no-commit-id --name-only --diff-filter=d -r "$1"); do
+				if [ -f "$toplevel/$file" ]; then
+					files="$files $file"
+				fi
+			done
 		fi
 		shift
 	done

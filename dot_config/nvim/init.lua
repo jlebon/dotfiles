@@ -55,6 +55,35 @@ vim.g.mapleader = ' '
 
 vim.keymap.set('n', '<leader>w', ':write<CR>', { desc = 'Write' })
 vim.keymap.set('n', '<leader>d', ':bdelete<CR>', { desc = 'Delete buffer' })
+
+-- Comment block text object
+
+local function select_comment_block()
+  local row = vim.fn.line('.')
+  local cur_line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+  local prefix = cur_line:match('^%s*(%S+%s)')
+  if not prefix then return end
+  local total = vim.api.nvim_buf_line_count(0)
+  local function matches(l)
+    if l < 1 or l > total then return false end
+    local line = vim.api.nvim_buf_get_lines(0, l - 1, l, false)[1]
+    return line:match('^%s*(%S+%s)') == prefix
+  end
+  local top, bot = row, row
+  while matches(top - 1) do top = top - 1 end
+  while matches(bot + 1) do bot = bot + 1 end
+  -- Enter/switch to visual line mode, then set the anchor at top and
+  -- cursor at bot (pattern from nvim-treesitter-textobjects).
+  if vim.fn.mode() ~= 'V' then
+    vim.cmd('normal! V')
+  end
+  vim.api.nvim_win_set_cursor(0, {top, 0})
+  vim.cmd('normal! o')
+  vim.api.nvim_win_set_cursor(0, {bot, 0})
+end
+
+vim.keymap.set({'o', 'x'}, 'ic', select_comment_block, { desc = 'inner comment block' })
+
 -- Tmux buffer integration
 
 local function tmux_yank(text)

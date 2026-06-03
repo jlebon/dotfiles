@@ -10,3 +10,5 @@ modifications. Do not resume the rebase and do not be confused by some of the
 changes from later commits not appearing.
 
 Do not create or amend git commits until told otherwise.
+
+Do not run `git rebase` under any condition.

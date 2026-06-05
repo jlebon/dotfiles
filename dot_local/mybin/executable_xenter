@@ -1,0 +1,144 @@
+#!/bin/bash
+set -euo pipefail
+shopt -s inherit_errexit
+
+# Enter a running xagent container. When in tmux, scopes to containers in the
+# current tmux window. Auto-selects if there's exactly one match.
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS] [CONTAINER] [-- COMMAND...]
+
+Enter a running xagent (pi/opencode) container.
+
+Options:
+  -h    Show this help message
+
+If CONTAINER is omitted and exactly one xagent is in scope, it is
+auto-selected.  Otherwise a table of candidates is printed.
+
+Scope: containers in the current tmux window, or all if not in tmux.
+EOF
+}
+
+container=""
+cmd_args=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h) usage; exit 0 ;;
+        --)
+            shift
+            cmd_args+=("$@")
+            break
+            ;;
+        -*)
+            echo "ERROR: unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+        *)
+            if [ -z "${container}" ]; then
+                container="$1"
+            else
+                echo "ERROR: unexpected argument: $1" >&2
+                usage >&2
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [ ${#cmd_args[@]} -eq 0 ]; then
+    cmd_args=(bash)
+fi
+
+# List xagent containers, optionally filtered to the current tmux window.
+# Output format: NAME MODE WORKDIR (tab-separated)
+list_xagent_containers() {
+    local filter_window="${1:-}"
+    local lines
+    # Grab name, labels, and working dir for containers with pi=1 or opencode=1
+    lines=$(podman ps --filter label=pi=1 --filter label=opencode=1 \
+                --format '{{.Names}}\t{{.Labels}}\t{{.Command}}' 2>/dev/null || true)
+    # podman --filter with multiple labels is OR within same key but we have
+    # different keys; we need two queries
+    lines=$(podman ps --format '{{.Names}}\t{{.Labels}}' \
+                --filter label=pi=1 2>/dev/null || true)
+    local lines2
+    lines2=$(podman ps --format '{{.Names}}\t{{.Labels}}' \
+                 --filter label=opencode=1 2>/dev/null || true)
+    if [ -n "${lines2}" ]; then
+        if [ -n "${lines}" ]; then
+            lines="${lines}"$'\n'"${lines2}"
+        else
+            lines="${lines2}"
+        fi
+    fi
+
+    [ -z "${lines}" ] && return
+
+    while IFS=$'\t' read -r name labels; do
+        # Parse mode
+        local mode="??"
+        if [[ "${labels}" == *"pi:1"* ]]; then
+            mode="pi"
+        elif [[ "${labels}" == *"opencode:1"* ]]; then
+            mode="oc"
+        fi
+
+        # Filter by tmux window if requested
+        if [ -n "${filter_window}" ]; then
+            if [[ "${labels}" != *"TMUX_WINDOW:${filter_window}"* ]]; then
+                continue
+            fi
+        fi
+
+        # Get workdir via inspect
+        local workdir
+        workdir=$(podman inspect --format '{{.Config.WorkingDir}}' "${name}" 2>/dev/null || echo "?")
+
+        printf '%s\t%s\t%s\n' "${name}" "${mode}" "${workdir}"
+    done <<< "${lines}"
+}
+
+# Determine tmux window scope
+tmux_window=""
+if [ -n "${TMUX_PANE:-}" ]; then
+    tmux_window=$(tmux display-message -p '#{window_id}')
+fi
+
+# Get candidates
+candidates=$(list_xagent_containers "${tmux_window}")
+
+if [ -z "${candidates}" ]; then
+    if [ -n "${tmux_window}" ]; then
+        echo "No xagent containers in this tmux window." >&2
+    else
+        echo "No xagent containers running." >&2
+    fi
+    exit 1
+fi
+
+# If a container was specified, verify it's in scope and exec into it
+if [ -n "${container}" ]; then
+    if ! grep -q "^${container}\b" <<< "${candidates}"; then
+        echo "ERROR: container '${container}' not found in scope" >&2
+        exit 1
+    fi
+    exec podman exec -ti "${container}" "${cmd_args[@]}"
+fi
+
+# Auto-select if exactly one candidate
+count=$(wc -l <<< "${candidates}")
+if [ "${count}" -eq 1 ]; then
+    name=$(cut -f1 <<< "${candidates}")
+    exec podman exec -ti "${name}" "${cmd_args[@]}"
+fi
+
+# Multiple candidates: print a table
+printf '%-25s %-4s %s\n' "CONTAINER" "MODE" "WORKDIR"
+while IFS=$'\t' read -r name mode workdir; do
+    printf '%-25s %-4s %s\n' "${name}" "${mode}" "${workdir}"
+done <<< "${candidates}"
+exit 0

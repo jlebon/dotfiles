@@ -244,6 +244,40 @@ require('mini.pick').setup()
 
 vim.keymap.set('n', '<leader>ff', '<cmd>Pick files<cr>', { desc = 'Find files' })
 vim.keymap.set('n', '<leader>fg', '<cmd>Pick grep_live<cr>', { desc = 'Live grep' })
+
+local function rg_escape(s)
+  return s:gsub('[\\.*+?()%[%]{}^$|]', '\\%0')
+end
+
+local function grep_live_query(query)
+  vim.schedule(function()
+    local chars = {}
+    for i = 1, #query do
+      chars[i] = query:sub(i, i)
+    end
+    MiniPick.set_picker_query(chars)
+  end)
+  MiniPick.builtin.grep_live()
+end
+
+local function grep_visual_selection()
+  local start = vim.fn.getpos('v')
+  local finish = vim.fn.getpos('.')
+  local lines = vim.fn.getregion(start, finish, { type = vim.fn.mode() })
+  local text = table.concat(lines, '\n')
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'nx', false)
+  grep_live_query(rg_escape(text))
+end
+
+vim.keymap.set('n', '<leader>fw', function()
+  grep_live_query('\\b' .. rg_escape(vim.fn.expand('<cword>')) .. '\\b')
+end, { desc = 'Grep word' })
+vim.keymap.set('n', '<leader>fW', function()
+  grep_live_query(rg_escape(vim.fn.expand('<cWORD>')))
+end, { desc = 'Grep WORD' })
+vim.keymap.set('v', '<leader>fw', grep_visual_selection, { desc = 'Grep selection' })
+vim.keymap.set('v', '<leader>fW', grep_visual_selection, { desc = 'Grep selection' })
+
 vim.keymap.set('n', '<leader>fb', '<cmd>Pick buffers<cr>', { desc = 'Buffers' })
 vim.keymap.set('n', '<leader>fh', '<cmd>Pick help<cr>', { desc = 'Help tags' })
 vim.keymap.set('n', '<leader>fr', '<cmd>Pick resume<cr>', { desc = 'Resume picker' })

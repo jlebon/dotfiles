@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 
 import argparse
+import http.client
 import json
+import os
+import socket
 import sys
 import urllib.request
 import urllib.error
@@ -156,12 +159,11 @@ def cmd_sync(args):
 
 def invoke(action, **params):
     body = json.dumps({"action": action, "params": params, "version": ANKI_VERSION})
-    req = urllib.request.Request(ANKI_URL, body.encode("utf-8"),
-                                {"Content-Type": "application/json"})
-    try:
-        resp = json.load(urllib.request.urlopen(req))
-    except urllib.error.URLError as e:
-        fatal(f"cannot connect to AnkiConnect at {ANKI_URL}: {e}")
+    sock_path = os.environ.get("ANKI_CONNECT_SOCKET")
+    if sock_path:
+        resp = invoke_unix(body, sock_path)
+    else:
+        resp = invoke_tcp(body)
     if len(resp) != 2:
         fatal(f"unexpected response format: {resp}")
     if "error" not in resp or "result" not in resp:
@@ -169,6 +171,36 @@ def invoke(action, **params):
     if resp["error"] is not None:
         fatal(f"AnkiConnect error: {resp['error']}")
     return resp["result"]
+
+
+def invoke_tcp(body):
+    req = urllib.request.Request(ANKI_URL, body.encode("utf-8"),
+                                {"Content-Type": "application/json"})
+    try:
+        return json.load(urllib.request.urlopen(req))
+    except urllib.error.URLError as e:
+        fatal(f"cannot connect to AnkiConnect at {ANKI_URL}: {e}")
+
+
+def invoke_unix(body, sock_path):
+    try:
+        conn = UnixHTTPConnection(sock_path)
+        conn.request("POST", "/", body.encode("utf-8"),
+                     {"Content-Type": "application/json"})
+        resp = conn.getresponse()
+        return json.loads(resp.read())
+    except (OSError, ConnectionError) as e:
+        fatal(f"cannot connect to AnkiConnect via {sock_path}: {e}")
+
+
+class UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, socket_path):
+        super().__init__("localhost")
+        self.socket_path = socket_path
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.socket_path)
 
 
 def parse_fields(field_args):

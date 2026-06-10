@@ -35,6 +35,7 @@ mount_oci_auth=false
 mount_kube=false
 mount_host_ca_certs=false
 host_cgroupns=false
+forward_anki=false
 net_mode=""
 clean_volumes=false
 force_update=false
@@ -54,6 +55,7 @@ Options:
   --kube        Mount Kubernetes config (~/.kube/config)
   --host-ca-certs Mount host CA certificates (/etc/pki/ca-trust)
   --host-cgroupns Use host cgroup namespace
+  --anki        Forward AnkiConnect (localhost:8765) via Unix socket
   --net MODE    Set network mode (passed to podman --net)
   --add-dir DIR Add a directory to the container (default: read-only; append :rw/:ro)
   --add-repo R  Add a repo (comma-separated) from ~/Code
@@ -104,6 +106,10 @@ while [ $# -gt 0 ]; do
             ;;
         --host-ca-certs)
             mount_host_ca_certs=true
+            shift
+            ;;
+        --anki)
+            forward_anki=true
             shift
             ;;
         --host-cgroupns)
@@ -346,6 +352,19 @@ if [ -n "${TMUX_PANE:-}" ]; then
     podman_args+=(--label TMUX_WINDOW="$(tmux display-message -p '#{window_id}')")
 fi
 
+# start anki-connect forwarder: bridges localhost:8765 to a unix socket
+anki_socat_pid=""
+if [ "${forward_anki}" = "true" ]; then
+    anki_sock_dir=$(mktemp -d)
+    anki_sock="${anki_sock_dir}/anki-connect.sock"
+    socat UNIX-LISTEN:"${anki_sock}",fork TCP:127.0.0.1:8765 &
+    anki_socat_pid=$!
+    # give socat a moment to bind
+    while [ ! -S "${anki_sock}" ]; do sleep 0.1; done
+    podman_args+=(-v "${anki_sock_dir}:${anki_sock_dir}")
+    podman_args+=(--env ANKI_CONNECT_SOCKET="${anki_sock}")
+fi
+
 # start hostexec so the agent can request host command execution
 hostd_pid=""
 if [ -n "${TMUX_PANE:-}" ]; then
@@ -434,6 +453,11 @@ export HOST_SPAWN_ENV
 
 # clean up hostexec on exit
 cleanup() {
+    if [ -n "${anki_socat_pid}" ]; then
+        kill "${anki_socat_pid}" 2>/dev/null
+        wait "${anki_socat_pid}" 2>/dev/null
+        rm -rf "${anki_sock_dir:-}"
+    fi
     if [ -n "${hostd_pid}" ]; then
         HOSTEXEC_SOCKET="${hostd_sock}" hostexec notify session-exit 2>/dev/null || true
         kill "${hostd_pid}" 2>/dev/null

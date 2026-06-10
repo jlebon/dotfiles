@@ -12,7 +12,7 @@ AnkiConnect plugin installed.
 ## Prerequisites
 
 - Anki running on the host with AnkiConnect plugin (code `2055492159`)
-- Port 8765 forwarded into the container (or direct host access)
+- xagent started with `--anki` flag (forwards AnkiConnect via Unix socket)
 
 ## CLI tool
 

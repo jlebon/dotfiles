@@ -1,0 +1,191 @@
+#!/usr/bin/python3
+
+import argparse
+import json
+import sys
+import urllib.request
+import urllib.error
+
+ANKI_URL = "http://localhost:8765"
+ANKI_VERSION = 6
+
+
+def main():
+    args = parse_args()
+    args.func(args)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog="anki-api",
+        description="CLI wrapper for AnkiConnect HTTP API",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("list-decks", help="List all deck names").\
+        set_defaults(func=cmd_list_decks)
+
+    p = sub.add_parser("create-deck", help="Create a deck (idempotent)")
+    p.add_argument("name", help="Deck name (use :: for nesting)")
+    p.set_defaults(func=cmd_create_deck)
+
+    sub.add_parser("list-models", help="List all note type names").\
+        set_defaults(func=cmd_list_models)
+
+    p = sub.add_parser("model-fields", help="List fields for a model")
+    p.add_argument("model", help="Model name")
+    p.set_defaults(func=cmd_model_fields)
+
+    p = sub.add_parser("deck-notes", help="Fetch all notes in a deck")
+    p.add_argument("deck", help="Deck name")
+    p.set_defaults(func=cmd_deck_notes)
+
+    p = sub.add_parser("add-note", help="Add a single note")
+    p.add_argument("--deck", required=True, help="Deck name")
+    p.add_argument("--model", required=True, help="Model/note type name")
+    p.add_argument("--field", action="append", required=True, metavar="KEY=VAL",
+                   help="Field value (repeatable)")
+    p.add_argument("--tag", action="append", default=[], help="Tag (repeatable)")
+    p.set_defaults(func=cmd_add_note)
+
+    p = sub.add_parser("add-notes", help="Add multiple notes from JSON file")
+    p.add_argument("file", help="JSON file with array of note objects")
+    p.set_defaults(func=cmd_add_notes)
+
+    sub.add_parser("sync", help="Sync to AnkiWeb").\
+        set_defaults(func=cmd_sync)
+
+    return parser.parse_args()
+
+
+def cmd_list_decks(args):
+    result = invoke("deckNames")
+    for name in sorted(result):
+        print(name)
+
+
+def cmd_create_deck(args):
+    deck_id = invoke("createDeck", deck=args.name)
+    print(f"Deck '{args.name}' ready (id: {deck_id})")
+
+
+def cmd_list_models(args):
+    result = invoke("modelNames")
+    for name in sorted(result):
+        print(name)
+
+
+def cmd_model_fields(args):
+    result = invoke("modelFieldNames", modelName=args.model)
+    for name in result:
+        print(name)
+
+
+def cmd_deck_notes(args):
+    note_ids = invoke("findNotes", query=f'deck:"{args.deck}"')
+    if not note_ids:
+        print("[]")
+        return
+    notes = invoke("notesInfo", notes=note_ids)
+    compact = []
+    for note in notes:
+        compact.append({
+            "noteId": note["noteId"],
+            "modelName": note["modelName"],
+            "fields": {k: v["value"] for k, v in note["fields"].items()},
+            "tags": note["tags"],
+        })
+    print(json.dumps(compact, indent=2, ensure_ascii=False))
+
+
+def cmd_add_note(args):
+    fields = parse_fields(args.field)
+    tags = list(args.tag)
+    if "pi-generated" not in tags:
+        tags.append("pi-generated")
+    note_id = invoke("addNote", note={
+        "deckName": args.deck,
+        "modelName": args.model,
+        "fields": fields,
+        "options": {
+            "allowDuplicate": False,
+            "duplicateScope": "deck",
+        },
+        "tags": tags,
+    })
+    if note_id is None:
+        fatal("addNote returned null (likely a duplicate)")
+    print(f"Added note {note_id}")
+
+
+def cmd_add_notes(args):
+    with open(args.file, encoding="utf-8") as f:
+        notes_data = json.load(f)
+    if not isinstance(notes_data, list):
+        fatal("JSON file must contain an array of note objects")
+    notes = []
+    for entry in notes_data:
+        tags = list(entry.get("tags", []))
+        if "pi-generated" not in tags:
+            tags.append("pi-generated")
+        notes.append({
+            "deckName": entry["deckName"],
+            "modelName": entry["modelName"],
+            "fields": entry["fields"],
+            "options": {
+                "allowDuplicate": False,
+                "duplicateScope": "deck",
+            },
+            "tags": tags,
+        })
+    results = invoke("addNotes", notes=notes)
+    added = 0
+    for i, note_id in enumerate(results):
+        if note_id is not None:
+            added += 1
+            print(f"Added note {note_id}")
+        else:
+            print(f"Skipped note {i} (duplicate or error)", file=sys.stderr)
+    print(f"\n{added}/{len(notes)} notes added")
+
+
+def cmd_sync(args):
+    invoke("sync")
+    print("Sync complete")
+
+
+def invoke(action, **params):
+    body = json.dumps({"action": action, "params": params, "version": ANKI_VERSION})
+    req = urllib.request.Request(ANKI_URL, body.encode("utf-8"),
+                                {"Content-Type": "application/json"})
+    try:
+        resp = json.load(urllib.request.urlopen(req))
+    except urllib.error.URLError as e:
+        fatal(f"cannot connect to AnkiConnect at {ANKI_URL}: {e}")
+    if len(resp) != 2:
+        fatal(f"unexpected response format: {resp}")
+    if "error" not in resp or "result" not in resp:
+        fatal(f"malformed response: {resp}")
+    if resp["error"] is not None:
+        fatal(f"AnkiConnect error: {resp['error']}")
+    return resp["result"]
+
+
+def parse_fields(field_args):
+    fields = {}
+    for item in field_args:
+        if "=" not in item:
+            fatal(f"invalid field format '{item}', expected KEY=VAL")
+        key, val = item.split("=", 1)
+        fields[key] = val
+    return fields
+
+
+def fatal(*args):
+    print("fatal:", *args, file=sys.stderr)
+    sys.stderr.flush()
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

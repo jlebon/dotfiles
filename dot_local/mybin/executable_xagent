@@ -206,6 +206,7 @@ podman_args+=(
     -v "${vol_prefix}-tmp:/tmp"
     --label "${mode}=1"
     --env EDITOR=nvim
+    --env GIT_SEQUENCE_EDITOR=true
     --env TERM="${TERM}"
     --env PATH="${PATH}"
     --env HOME="${HOME}"

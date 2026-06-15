@@ -19,8 +19,7 @@
 
 - Git repos for all codebases are under ~/Code.
 - When working in a git repo, if the .git repo is not read-only, you SHOULD create a git commit using `git commit -am` (NOT -A).
-- When partially staging changes, you SHOULD use `git addhunks`. Run `git addhunks --help` to learn how to use it.
-- When running `git rebase --continue`, you MUST set `GIT_EDITOR=true` to avoid opening an interactive editor (which will fail in this environment).
+- When partially staging changes, you SHOULD use `git addhunks`. Run `git addhunks -h` to learn how to use it.
 - When writing git messages:
   - You MUST add "Assisted-by: Pi (MODEL)" trailers, where MODEL is the friendly model name.
   - If you know why the change is being made, you MUST focus on the "why", not the "what".

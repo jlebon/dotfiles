@@ -33,6 +33,15 @@ export default function (pi: ExtensionAPI) {
       },
     };
   });
+
+  pi.registerCommand("wipe", {
+    description: "Reset inner podman storage (images, containers, volumes)",
+    handler: async (_args, ctx) => {
+      await execFileAsync("podman", ["system", "reset", "-f"]);
+      await updateStatus(ctx);
+      ctx.ui.notify("Podman storage reset", "info");
+    },
+  });
 }
 
 async function updateStatus(ctx: { ui: { setStatus: Function; theme: any } }) {

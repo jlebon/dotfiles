@@ -418,11 +418,32 @@ vim.lsp.config('gopls', {
 
 vim.lsp.enable('clangd')
 vim.lsp.enable('gopls')
+vim.lsp.config('pylsp', {
+  settings = {
+    pylsp = {
+      plugins = {
+        autopep8 = { enabled = false },
+        yapf = { enabled = false },
+        pycodestyle = { enabled = false },
+        pyflakes = { enabled = false },
+        mccabe = { enabled = false },
+      },
+    },
+  },
+})
+
 vim.lsp.enable('pylsp')
+vim.lsp.enable('ruff')
 vim.lsp.enable('rust_analyzer')
 
+-- vim.lsp.config['harper'] = {
+--     cmd = { 'harper-ls', '--stdio' },
+--     filetypes = { 'markdown', 'text', 'tex', 'typst' }
+-- }
+-- vim.lsp.enable('harper')
+
 vim.api.nvim_create_autocmd('BufWritePre', {
-  pattern = { '*.rs', '*.go' },
+  pattern = { '*.rs', '*.go', '*.py' },
   callback = function()
     vim.lsp.buf.format({ async = false })
   end,

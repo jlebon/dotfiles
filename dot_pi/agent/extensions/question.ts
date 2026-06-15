@@ -147,6 +147,15 @@ class QnAComponent implements Component {
 			return;
 		}
 
+		// Ctrl-J (\n): insert newline when editor is active
+		const editorActive = !this.hasOptions(this.currentIndex) || this.states[this.currentIndex].inEditMode;
+		if (data === "\n" && editorActive) {
+			this.editor.handleInput(data);
+			this.invalidate();
+			this.tui.requestRender();
+			return;
+		}
+
 		if (matchesKey(data, Key.tab)) {
 			if (this.currentIndex < this.questions.length - 1) {
 				this.navigateTo(this.currentIndex + 1);
@@ -190,7 +199,8 @@ class QnAComponent implements Component {
 		};
 		const padToWidth = (line: string): string => {
 			const len = visibleWidth(line);
-			return line + " ".repeat(Math.max(0, width - len));
+			if (len > width) return truncateToWidth(line, width);
+			return line + " ".repeat(width - len);
 		};
 
 		// Title

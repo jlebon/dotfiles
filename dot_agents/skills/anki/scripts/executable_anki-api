@@ -55,6 +55,16 @@ def parse_args():
     p.add_argument("file", help="JSON file with array of note objects")
     p.set_defaults(func=cmd_add_notes)
 
+    p = sub.add_parser("update-note", help="Update fields of an existing note")
+    p.add_argument("note_id", type=int, help="Note ID to update")
+    p.add_argument("--field", action="append", required=True, metavar="KEY=VAL",
+                   help="Field value to update (repeatable)")
+    p.set_defaults(func=cmd_update_note)
+
+    p = sub.add_parser("delete-note", help="Delete a note by ID")
+    p.add_argument("note_id", type=int, help="Note ID to delete")
+    p.set_defaults(func=cmd_delete_note)
+
     sub.add_parser("sync", help="Sync to AnkiWeb").\
         set_defaults(func=cmd_sync)
 
@@ -150,6 +160,20 @@ def cmd_add_notes(args):
         else:
             print(f"Skipped note {i} (duplicate or error)", file=sys.stderr)
     print(f"\n{added}/{len(notes)} notes added")
+
+
+def cmd_update_note(args):
+    fields = parse_fields(args.field)
+    invoke("updateNoteFields", note={
+        "id": args.note_id,
+        "fields": fields,
+    })
+    print(f"Updated note {args.note_id}")
+
+
+def cmd_delete_note(args):
+    invoke("deleteNotes", notes=[args.note_id])
+    print(f"Deleted note {args.note_id}")
 
 
 def cmd_sync(args):

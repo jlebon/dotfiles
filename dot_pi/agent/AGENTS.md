@@ -12,6 +12,7 @@
 - You have access to glab to interact with gitlab.com with a read-only token.
 - For read-write gh or glab operations (e.g. creating PRs, merging, commenting), run in the host context.
 - For `rhjira` operations, run it in the host context.
+- For `gws` operations, run it in the host context.
 - To spawn a subagent, run `~/.pi/pi -p "<prompt>"`. This starts a separate pi instance in print mode that processes the prompt and exits. Use this to delegate subtasks without losing your current context.
 
 # Git

@@ -223,14 +223,30 @@ gws sheets spreadsheets values update \
 ## Docs
 
 ```bash
+# Export document as plain text (best for reading content)
+gws drive files export --params '{"fileId": "DOC_ID", "mimeType": "text/plain"}' -o doc.txt
+
+# Export as HTML (verbose Google CSS, but preserves formatting)
+gws drive files export --params '{"fileId": "DOC_ID", "mimeType": "text/html"}' -o doc.html
+
+# Get document structure as JSON
+gws docs documents get --params '{"documentId": "DOC_ID"}'
+
 # Append text (helper)
 gws docs +write --document DOC_ID --text 'Hello, world!'
 
-# Get document
-gws docs documents get --params '{"documentId": "DOC_ID"}'
-
 # Create document
 gws docs documents create --json '{"title": "Meeting Notes"}'
+```
+
+## Slides
+
+```bash
+# Export presentation as plain text (best for reading content)
+gws drive files export --params '{"fileId": "PRESENTATION_ID", "mimeType": "text/plain"}' -o slides.txt
+
+# Get presentation structure as JSON
+gws slides presentations get --params '{"presentationId": "PRESENTATION_ID"}'
 ```
 
 ## Chat
